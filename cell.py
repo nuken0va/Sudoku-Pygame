@@ -1,6 +1,7 @@
 from ast import Pass
 import pygame
 from typing import Union
+from point import Point
 
 class Cell:
     rect : pygame.Rect
@@ -10,7 +11,7 @@ class Cell:
     sf_err_mask : pygame.Surface
 
     sf_dig : pygame.Surface
-    id : tuple[int, int]
+    id : Point
 
     selected : bool
     marked : bool
@@ -18,7 +19,7 @@ class Cell:
     def __init__(self, sf_cell : pygame.Surface, 
                        sf_sel_mask : pygame.Surface, 
                        sf_err_mask : pygame.Surface, 
-                       pos : tuple[float, float], id : tuple[int, int]):
+                       pos : tuple[float, float], id : Point):
         self.sf_cell = sf_cell
         self.sf_sel_mask = sf_sel_mask
         self.sf_err_mask = sf_err_mask
