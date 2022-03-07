@@ -8,18 +8,25 @@ from point import Point
 from collections.abc import Iterable
 
 class Field:
-    def __init__(self, sf_cell : pygame.Surface, sf_sel_cell : pygame.Surface, sf_err_cell : pygame.Surface):
-        self.cells = [[None for j in range(9)] for i in range(9)]
-        self.selected = None
-        for x_pos, y_pos, x_off, y_off in product(range(0,3), repeat =4 ):
-            self.cells[x_pos + x_off * 3][y_pos + y_off * 3] = Cell(sf_cell, sf_sel_cell, sf_err_cell,
-                (x_pos * 32 + x_off * (32 * 3 + 4), y_pos * 32 + y_off * (32 * 3 + 4)),
-                Point(x_pos + x_off * 3, y_pos + y_off * 3))
 
-    def select_colide_cell(self, x : float, y : float):
+    selected : Cell = None
+
+    def __init__(self):
+        self.cells = [[None for j in range(9)] for i in range(9)]
+        Cell.init()
+        for id in range(81):
+            x, y = id // 9, id % 9
+            self.cells[x][y] = Cell(
+                (x * 32 + (x // 3) * 4,  y * 32 + (y // 3) * 4),
+                Point(x, y))
+
+    def deselect(self):
         if self.selected:
             self.selected.deselect()
             self.selected = None
+
+    def select_colide_cell(self, x : float, y : float):
+        self.deselect()
         for row in self.cells:
             for cell in row: 
                 if cell.collidepoint(x, y):
@@ -27,22 +34,22 @@ class Field:
                     cell.select()
     
     def select_cell(self, x : int, y : int):
-        if self.selected:
-            self.selected.deselect()
+        self.deselect()
         self.selected = self.cells[x][y]
         self.cells[x][y].select()
     
-    def check_iter(cells : Iterable) -> bool:
+    def __check_iter(cells : Iterable) -> bool:
         correct = True
         digs = {}
         for cell in cells:
-            if cell.value: 
-                if cell.value in digs:
-                    digs[cell.value].mark()
+            value = cell.get_value()
+            if value: 
+                if value in digs:
+                    digs[value].mark()
                     cell.mark()
                     correct = False
                 else:
-                    digs[cell.value] = cell
+                    digs[value] = cell
             else: correct = False
         return correct
 
@@ -50,19 +57,23 @@ class Field:
         for i,j in product(range(9), repeat=2): self.cells[i][j].unmark()
         correct = True
         for i in range(9):
-            correct &= Field.check_iter([self.cells[i][j] for j in range(9)])
-            correct &= Field.check_iter([self.cells[j][i] for j in range(9)])
-            correct &= Field.check_iter([self.cells[i - (i % 3) + j // 3][(i % 3) * 3 + j % 3]  for j in range(9)])
+            correct &= Field.__check_iter([self.cells[i][j] for j in range(9)])
+            correct &= Field.__check_iter([self.cells[j][i] for j in range(9)])
+            correct &= Field.__check_iter(
+                [self.cells[i - (i % 3) + j // 3][(i % 3) * 3 + j % 3]  for j in range(9)])
         return correct
 
-    def set_cell(self, value, sf_dig : pygame.Surface):
-        if self.selected:
-            self.selected.set(value, sf_dig)
-            result = self.check_solution()
-        print(result)
-    
-    def safe_set_cell(self, x : int, y : int, value, sf_dig : pygame.Surface):
-        self.cells[x][y].set(value, sf_dig)
+    def set_cell(self, value : int, pos : Point = None, check : bool = True) -> bool:
+        result = False
+        if pos: 
+            cell = self.cells[pos.x][pos.y]
+        else:
+            cell = self.selected
+        if cell:
+            cell.set_value(value)
+            if check: 
+                result = self.check_solution()
+        return result
 
     def draw(self, screen : pygame.Surface):
         for row in self.cells:

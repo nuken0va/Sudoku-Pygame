@@ -1,56 +1,69 @@
+import glob
 from ast import Pass
+import random
+from secrets import randbelow
+from typing import ClassVar, Union
+
 import pygame
-from typing import Union
+
 from point import Point
 
+
 class Cell:
-    rect : pygame.Rect
+    __rect : pygame.Rect
 
-    sf_cell : pygame.Surface
-    sf_sel_mask : pygame.Surface
-    sf_err_mask : pygame.Surface
+    __sf_cell : ClassVar[pygame.Surface]
+    __sf_sel_mask : ClassVar[pygame.Surface]
+    __sf_err_mask : ClassVar[pygame.Surface]
+    __sf_dig : ClassVar[list[pygame.Surface]]
 
-    sf_dig : pygame.Surface
-    id : Point
+    __id : int
+    __value : int = None
+    __type : int = None
 
-    selected : bool
-    marked : bool
 
-    def __init__(self, sf_cell : pygame.Surface, 
-                       sf_sel_mask : pygame.Surface, 
-                       sf_err_mask : pygame.Surface, 
-                       pos : tuple[float, float], id : Point):
-        self.sf_cell = sf_cell
-        self.sf_sel_mask = sf_sel_mask
-        self.sf_err_mask = sf_err_mask
+    __selected : bool = False
+    __marked : bool = False
 
-        self.rect = sf_cell.get_rect(topleft = pos) 
-        self.value = None
+    def __init__(self, pos : tuple[float, float], id : Point):
+        self.__rect = Cell.__sf_cell.get_rect(topleft = pos) 
         self.id = id
-        self.selected = False
-        self.marked = False
     
-    def draw(self, screen : pygame.Surface):
-        screen.blit(self.sf_cell, self.rect)
-        if self.selected: screen.blit(self.sf_sel_mask, self.rect)
-        if self.marked: screen.blit(self.sf_err_mask, self.rect)
-        if self.value is not None: screen.blit(self.sf_dig, self.rect)
+    def init():
+        Cell.__sf_cell = pygame.image.load("dig\\cell.png").convert_alpha()
+        Cell.__sf_sel_mask = pygame.image.load("dig\\selected_mask.png").convert_alpha()
+        Cell.__sf_err_mask = pygame.image.load("dig\\error_mask.png").convert_alpha()
+        Cell.__sf_dig = [[pygame.image.load(file).convert_alpha() for file in glob.glob(f"dig\\{i}_v*.png")] for i in range(1,10)]
 
-    def set(self, value, sf_dig : pygame.Surface):
-        self.value = value
-        self.sf_dig = sf_dig
+
+    def draw(self, screen : pygame.Surface):
+        screen.blit(Cell.__sf_cell, self.__rect)
+        if self.__selected: screen.blit(Cell.__sf_sel_mask, self.__rect)
+        if self.__marked: screen.blit(Cell.__sf_err_mask, self.__rect)
+        if self.__value: screen.blit(Cell.__sf_dig[self.__value - 1][self.__type], self.__rect)
+
+    def set_value(self, value):
+        self.__value = value
+        self.__type = random.randrange(len(Cell.__sf_dig[value - 1]))
+
+        
+    def get_value(self):
+        return self.__value
+
+    def get_id(self) -> int: 
+        return self.__id
 
     def collidepoint(self, x : float, y : float) -> bool:
-        return self.rect.collidepoint(x,y)
+        return self.__rect.collidepoint(x,y)
 
     def select(self):
-        self.selected = True
+        self.__selected = True
 
     def deselect(self):
-        self.selected = False
+        self.__selected = False
 
     def mark(self):
-        self.marked = True
+        self.__marked = True
 
     def unmark(self):
-        self.marked = False
+        self.__marked = False
