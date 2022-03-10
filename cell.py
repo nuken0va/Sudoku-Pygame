@@ -1,8 +1,6 @@
 import glob
-from ast import Pass
 import random
-from secrets import randbelow
-from typing import ClassVar, Union
+from typing import ClassVar
 
 import pygame
 
@@ -10,8 +8,6 @@ from point import Point
 
 
 class Cell:
-    __rect : pygame.Rect
-
     __sf_cell : ClassVar[pygame.Surface]
     __sf_sel_mask : ClassVar[pygame.Surface]
     __sf_err_mask : ClassVar[pygame.Surface]
@@ -20,6 +16,7 @@ class Cell:
     __id : int
     __value : int = None
     __type : int = None
+    __rect : pygame.Rect
 
 
     __selected : bool = False
@@ -38,13 +35,17 @@ class Cell:
 
     def draw(self, screen : pygame.Surface):
         screen.blit(Cell.__sf_cell, self.__rect)
-        if self.__selected: screen.blit(Cell.__sf_sel_mask, self.__rect)
-        if self.__marked: screen.blit(Cell.__sf_err_mask, self.__rect)
-        if self.__value: screen.blit(Cell.__sf_dig[self.__value - 1][self.__type], self.__rect)
+        if self.__selected: 
+            screen.blit(Cell.__sf_sel_mask, self.__rect)
+        if self.__marked: 
+            screen.blit(Cell.__sf_err_mask, self.__rect)
+        if self.__value: 
+            screen.blit(Cell.__sf_dig[self.__value - 1][self.__type], self.__rect)
 
     def set_value(self, value):
         self.__value = value
-        self.__type = random.randrange(len(Cell.__sf_dig[value - 1]))
+        if self.__value:
+            self.__type = random.randrange(len(Cell.__sf_dig[value - 1]))
 
         
     def get_value(self):

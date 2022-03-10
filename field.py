@@ -1,11 +1,11 @@
-from ast import Pass
-import pstats
-from re import L
-import pygame
+from collections.abc import Iterable
 from itertools import product
+
+import pygame
+
 from cell import Cell
 from point import Point
-from collections.abc import Iterable
+
 
 class Field:
 

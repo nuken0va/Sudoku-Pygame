@@ -1,13 +1,11 @@
-from itertools import product
+import sys
+
 import pygame
 from pygame.locals import *
+
+from config import load_config
 from field import Field
 from point import Move, Point
-import sys
-import glob
-import math
-import random
-from config import load_config
 
 example_sudoku = [
     [9, 6, 4, 3, 8, 2, 7, 5, 1], 
