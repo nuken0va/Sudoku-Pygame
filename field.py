@@ -9,7 +9,7 @@ from point import Point
 
 class Field:
 
-    selected : Cell = None
+    selected: Cell = None
 
     def __init__(self):
         self.cells = [[None for j in range(9)] for i in range(9)]
@@ -25,32 +25,33 @@ class Field:
             self.selected.deselect()
             self.selected = None
 
-    def select_colide_cell(self, x : float, y : float):
+    def select_colide_cell(self, x: float, y: float):
         self.deselect()
         for row in self.cells:
-            for cell in row: 
+            for cell in row:
                 if cell.collidepoint(x, y):
                     self.selected = cell
                     cell.select()
     
-    def select_cell(self, x : int, y : int):
+    def select_cell(self, x: int, y: int):
         self.deselect()
         self.selected = self.cells[x][y]
         self.cells[x][y].select()
     
-    def __check_iter(cells : Iterable) -> bool:
+    def __check_iter(cells: Iterable) -> bool:
         correct = True
         digs = {}
         for cell in cells:
             value = cell.get_value()
-            if value: 
+            if value:
                 if value in digs:
                     digs[value].mark()
                     cell.mark()
                     correct = False
                 else:
                     digs[value] = cell
-            else: correct = False
+            else: 
+                correct = False
         return correct
 
     def check_solution(self) -> bool:
@@ -60,10 +61,10 @@ class Field:
             correct &= Field.__check_iter([self.cells[i][j] for j in range(9)])
             correct &= Field.__check_iter([self.cells[j][i] for j in range(9)])
             correct &= Field.__check_iter(
-                [self.cells[i - (i % 3) + j // 3][(i % 3) * 3 + j % 3]  for j in range(9)])
+                [self.cells[i - (i % 3) + j // 3][(i % 3) * 3 + j % 3] for j in range(9)])
         return correct
 
-    def set_cell(self, value : int, pos : Point = None, check : bool = True) -> bool:
+    def set_cell(self, value: int, pos: Point = None, check: bool = True) -> bool:
         result = False
         if pos: 
             cell = self.cells[pos.x][pos.y]
@@ -75,7 +76,7 @@ class Field:
                 result = self.check_solution()
         return result
 
-    def draw(self, screen : pygame.Surface):
+    def draw(self, screen: pygame.Surface):
         for row in self.cells:
             for cell in row: 
                 cell.draw(screen)

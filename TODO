@@ -1,0 +1,27 @@
+Sudoku Techniques:
+Adv:
+4. X-wing
+	Ищем два столбца/строки где некоторая заметка повторяется ровно два раза в тех же строках/столбцах
+	Можно вычесть эти значения из строк/столбцов
+5. Sword fish
+	X-wing на 3 столбца/строки
+6. XY-wing
+	ищем 3 клетки A, B, C с двумя отметками такими, что A = (x, z), B = (x, y), C = (y, z); A и B соседи, B и C соседи
+	тогда можно исключить z из пересечения соседей A и C
+	
+    Start with the top left of the puzzle, working from left to right.
+    Focus only on the cells that have exactly 2 pencil marks in them (Sudoklue will highlight these if you press Ctrl-Y)
+    For each cell that has two pencil marks, do the following:
+        Mentally note the two pencil marks
+        Scan that cell's block, column, and row for another cell with one of those pencil marks (remember, only look at cells with two pencil marks)
+        For every one you find, you will have a common pencil mark, and two uncommon pencil marks. Now it's time to look for a third cell that has the two uncommon pencil marks. It will need to intersect with one (but not both) of your first two cells. If you find one, you will have found your "Y". Jump down to #4 below.
+        Haven't found any? Most of the time you won't. Just move on to the next cell and continue.
+    Found three cells? Great! Now figure out which of the three intersects both the others. This will be the "middle". The two others will be the wings.
+    The two wings will share a pencil mark that the "middle" cell does not have. This is the candidate we can remove from other cells.
+    If you did it right, you will be able to logically assume that one of the two wings will be that number. So, find any cells that intersect both of them and remove the candidates!
+
+
+Sudoku Game:
+1. Add Marks
+2. Opt undo/redo for marks
+3. Light up all digits/all marks with digit

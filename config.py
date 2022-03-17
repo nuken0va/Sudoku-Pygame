@@ -7,6 +7,7 @@ EXAMPLE_CONFIG = """"[screen]
 "height" = 480
 """
 
+
 def load_config(path="./config.toml"):
     """Loads the config from `path`"""
     if os.path.exists(path) and os.path.isfile(path):
