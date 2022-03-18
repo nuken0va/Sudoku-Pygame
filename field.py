@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from itertools import product
 
+from typing import ClassVar
 import pygame
 
 from cell import Cell
@@ -9,16 +10,25 @@ from point import Point
 
 class Field:
 
+    __sf_field: ClassVar[pygame.Surface]
+    __rect: pygame.Rect
+
     selected: Cell = None
 
     def __init__(self):
+        self.__rect = Field.__sf_field.get_rect(topleft=(0,0))
         self.cells = [[None for j in range(9)] for i in range(9)]
-        Cell.init()
         for id in range(81):
             x, y = id // 9, id % 9
             self.cells[x][y] = Cell(
-                (x * 32 + (x // 3) * 4,  y * 32 + (y // 3) * 4),
+                (
+                6 + x * 64 + x * 2 + (x // 3),  
+                150 + y * 64 + y * 2 + (y // 3)),
                 Point(x, y))
+
+    def init():
+        Field.__sf_field = pygame.image.load("dig\\sudoku.png").convert()
+        Cell.init()
 
     def deselect(self):
         if self.selected:
@@ -76,7 +86,18 @@ class Field:
                 result = self.check_solution()
         return result
 
+    def set_mark(self, value: int, pos: Point = None) -> bool:
+        result = False
+        if pos: 
+            cell = self.cells[pos.x][pos.y]
+        else:
+            cell = self.selected
+        if cell:
+            cell.set_mark(value)
+        return result
+
     def draw(self, screen: pygame.Surface):
+        screen.blit(Field.__sf_field, self.__rect)
         for row in self.cells:
             for cell in row: 
                 cell.draw(screen)

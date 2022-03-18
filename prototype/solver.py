@@ -17,23 +17,25 @@ class Cell:
 
 @dataclass
 class Step:
-    index: int
-    value: int
     method: str
-
+    description: dict
 
 class Solver():
     grid: list[Cell]
     solution_exists: bool = True
+    steps: list[Step]
 
-    def get_id(x, y):
+    def to_id(x, y):
+        """Converts x,y coordinates of cell to cell id (index)"""
         return x + y * 9
 
-    def get_cord(index):
+    def to_cord(index):
+        """Converts cell id (index) of cell to  its x,y coordinates"""
         return index // 9, index % 9
 
     def get_minigrid_id(x, y):
         """
+        Сalculates minigrid id by x,y coordinates of cell
         Minigrids ids:
         [0][1][2]
         [3][4][5]
@@ -42,10 +44,20 @@ class Solver():
         return y - (y % 3) + (x // 3)
 
     def get_free(block):
+        """
+        Returns ammount of cells without a value
+        """
         return len([cell for cell in block if not cell.value])
+
+    def check_candidates(self):
+        """
+        Returns True if every empty cell has at least 1 candidate
+        """
+        return all(cell.value or len(cell.candidates) for cell in self.grid)
 
     def __init__(self, input):
         self.grid = []
+        self.steps = []
         if type(input) == list:
             for ind, el in enumerate(input):
                 if el is None:
@@ -64,26 +76,26 @@ class Solver():
 
     def range_column(self, index, start=0, end=9):
         for i in range(start, end):
-            yield self.grid[Solver.get_id(index, i)]
+            yield self.grid[Solver.to_id(index, i)]
 
     def range_row(self, index, start=0, end=9):
         for i in range(start, end):
-            yield self.grid[Solver.get_id(i, index)]
+            yield self.grid[Solver.to_id(i, index)]
 
     def range_minigrid(self, index, start=0, end=9):
         x, y = (index % 3) * 3, index - (index % 3)
         for i in range(start, end):
             j, k = i % 3, i // 3
-            yield self.grid[Solver.get_id(x + j, y + k)]
+            yield self.grid[Solver.to_id(x + j, y + k)]
 
     def range_neighbours(self, cell: Cell):
         x, y = cell.index % 9, cell.index // 9
         # Column except cell
         for i in chain(range(y), range(y + 1, 9)):
-            yield self.grid[Solver.get_id(x, i)]
+            yield self.grid[Solver.to_id(x, i)]
         # Row except cell
         for i in chain(range(x), range(x + 1, 9)):
-            yield self.grid[Solver.get_id(i, y)]
+            yield self.grid[Solver.to_id(i, y)]
         # Minigrid except row and column
         x_base, y_base = x - (x % 3), y - (y % 3)
         x, y = x % 3, y % 3
@@ -91,24 +103,21 @@ class Solver():
                 chain(range(x), range(x + 1, 3)),
                 chain(range(y), range(y + 1, 3))
                 ):
-            yield self.grid[Solver.get_id(x_base + i, y_base + j)]
+            yield self.grid[Solver.to_id(x_base + i, y_base + j)]
 
     def update_grid(self, cell):
+        """
+        Deletes cell.value from cell neighbours' candidates
+        """
         for other in self.range_neighbours(cell):
             other.candidates.discard(cell.value)
-            if len(other.candidates) == 1:
-                Step(other.index)
-                self.set_value(other)
-                print(f"Set {Solver.get_cord(other.index)} to value {other.value} while update")
 
-    def set_value(self, cell, value=None):
-        if not value:
-            value = cell.candidates.pop()
+    def __set_value(self, cell, value):
         cell.value = value
         cell.candidates = set()
         self.update_grid(cell)
 
-    def crme(self):
+    def init_candidates(self):
         """
         CRME method.
         Scans neighbor cells to eliminate candidates
@@ -118,13 +127,23 @@ class Solver():
                 continue
             for other in self.range_neighbours(cell):
                 cell.candidates.discard(other.value)
+        return False
+
+    def naked_singles(self):
+        """
+        Naked Singles method
+        Fill the cells that only have 1 candidate 
+        """
+        for cell in self.grid:
+            if cell.value:
+                continue
             if len(cell.candidates) == 1:
-                self.set_value(cell)
-            elif len(cell.candidates) == 0:
-                self.solution_exists = False   
-                print(f"CRME {Solver.get_cord(cell.index)}, value {cell.value}")
+                value = cell.candidates.pop()
+                self.steps.append(Step("Naked Single", {"id": cell.index, "value": value}))
+                self.__set_value(cell, value)
                 return True
         return False
+
 
     def hidden_singles(self):
         """
@@ -140,8 +159,9 @@ class Solver():
                 group = [cell for cell in block
                          if not cell.value and digit in cell.candidates]
                 if len(group) == 1:
-                    self.set_value(group[0], digit)
-                    print(f"Hidden Single {block.__name__}({i}) {Solver.get_cord(group[0].index)} value {digit}")
+                    cell = group[0]
+                    self.steps.append(Step("Hidden Single", {"id": cell.index, "value": digit}))
+                    self.__set_value(cell, digit)
                     return True
         return False
 
@@ -206,7 +226,7 @@ class Solver():
         Scans candidates of all cells in row/column/minigrid
         to find naked indpendend groups
         """
-        found, updated = False, False
+        updated = False
         for i, block in product(range(9), [self.range_row,
                                            self.range_column,
                                            self.range_minigrid]
@@ -220,13 +240,8 @@ class Solver():
                     continue
                 updated = True
                 cell.candidates.difference_update(candidates)
-                if len(cell.candidates) == 1:
-                    found = True
-                    self.set_value(cell)
-                elif len(cell.candidates) == 0:
-                    self.solution_exists = False   
             if updated:
-                print(f"Group size {group_size} found in {block.__name__}({i})")
+                self.steps.append(Step(f"Naked Group({group_size})", {"ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
                 return True
         return False
 
@@ -250,10 +265,6 @@ class Solver():
                 continue
             found = True
             cell.candidates.difference_update(unique)
-            if len(cell.candidates) == 1:
-                self.set_value(cell)
-            elif len(cell.candidates) == 0:
-                self.solution_exists = False   
         return found
 
     def all_omissions(self):
@@ -273,7 +284,7 @@ class Solver():
             result |= self.__omission(grid, column)
             result |= self.__omission(grid, row)
             if result:
-                print(f"Omission {x = }, {y = }, {offset = }")
+                self.steps.append(Step("Omission", {"grid": Solver.get_minigrid_id(x, y), "column": x + offset, "row":  y + offset}))
                 return True
         return False
 
@@ -332,48 +343,45 @@ class Solver():
                     continue
                 updated = True
                 cell.candidates.intersection_update(candidates)
-                if len(cell.candidates) == 1:
-                    found = True
-                    self.set_value(cell)
-                elif len(cell.candidates) == 0:
-                    self.solution_exists = False
             if updated:
-                print(f"Hidden group size {group_size} found in {block.__name__}({i})")
+                self.steps.append(Step(f"Hidden Group({group_size})", {"ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
                 return True
         return False
 
     def brute_force(self, first=True):
         bf = min((cell for cell in self.grid if not cell.value), key=lambda cell: len(cell.candidates))
-        solution_count = 0
+        total_colutions = 0
         self.print_sudoku(True)
         for candidate in bf.candidates:
             print(f"Brute Force cell {bf.index}: try {candidate}")
             self.grid[bf.index] = Cell(bf.index, candidate, set())
             solver = Solver(self)
-            result = solver.solve()
-            if result:
-                print(f"Brute Force success")
+            solution_count, difficulty = solver.solve(first)
+            print(f"Brute Force {solution_count = }")
+            if solution_count:
                 if first:
-                    return result
+                    self.grid = solver.grid
+                    self.steps.append(Step("Brute Force", {"size":len(bf.candidates), "id": bf.index, "value": candidate}))
+                    self.steps += solver.steps
+                    return solution_count, difficulty
                 else:
-                    solution_count += 1
+                    total_colutions += solution_count
             print(f"Brute Force rolledback")
-        print(f"Brute Force failed")
         if first:
-            return False
+            return 0, -1
         else:
-            return solution_count
+            return total_colutions, difficulty
 
     def old_print_sudoku(self, dbg=False):
         missing = 0
         for row in range(9):
             for column in range(9):
-                if self.grid[Solver.get_id(column, row)].value:
-                    print(self.grid[Solver.get_id(column, row)].value, end=" ")
+                if self.grid[Solver.to_id(column, row)].value:
+                    print(self.grid[Solver.to_id(column, row)].value, end=" ")
                 else:
                     missing += 1
                     if dbg:
-                        print(self.grid[Solver.get_id(column, row)].candidates, end=" ")
+                        print(self.grid[Solver.to_id(column, row)].candidates, end=" ")
                     else:
                         print(end="  ")
             print()
@@ -382,83 +390,94 @@ class Solver():
     def print_sudoku(self, dbg=False):
         for row in range(9):
             for column in range(9):
-                if self.grid[Solver.get_id(column, row)].value:
+                if self.grid[Solver.to_id(column, row)].value:
                     print("┌─┐", end="")
                 else:
                     for i in range(1, 4):
-                        if i in self.grid[Solver.get_id(column, row)].candidates:
+                        if i in self.grid[Solver.to_id(column, row)].candidates:
                             print(i, end="")
                         else:
                             print(" ", end="")
 
             print()
             for column in range(9):
-                if self.grid[Solver.get_id(column, row)].value:
-                    print(f"│{self.grid[Solver.get_id(column, row)].value}│", end="")
+                if self.grid[Solver.to_id(column, row)].value:
+                    print(f"│{self.grid[Solver.to_id(column, row)].value}│", end="")
                 else:
                     for i in range(4, 7):
-                        if i in self.grid[Solver.get_id(column, row)].candidates:
+                        if i in self.grid[Solver.to_id(column, row)].candidates:
                             print(i, end="")
                         else:
                             print(" ", end="")
 
             print()
             for column in range(9):
-                if self.grid[Solver.get_id(column, row)].value:
+                if self.grid[Solver.to_id(column, row)].value:
                     print("└─┘", end="")
                 else:
                     for i in range(7, 10):
-                        if i in self.grid[Solver.get_id(column, row)].candidates:
+                        if i in self.grid[Solver.to_id(column, row)].candidates:
                             print(i, end="")
                         else:
                             print(" ", end="")
             print()
         print()
 
-    def solve(self):
-        self.crme()
-        while Solver.get_free(self.grid):
-            print(self.solution_exists)
-            self.print_sudoku()
-            if self.hidden_singles():
-                continue
-            if self.all_omissions():
-                continue
-            if self.group_elimination(2):
-                continue
-            if self.group_elimination(3):
-                continue
-            if self.hidden_group_elimination(2):
-                continue
-            if self.group_elimination(4):
-                continue
-            if self.hidden_group_elimination(3):
-                continue
-            if self.hidden_group_elimination(4):
-                continue
-            return self.brute_force(True)
-        self.print_sudoku()
-        return True
+    def solve(self, first = True):
+        """
+        Retruns (solution_count, difficulty)
+        """
+        difficulty = 0
+        solution_count = 0
+        self.init_candidates()
+        while Solver.get_free(self.grid) and self.check_candidates():
+            #self.print_sudoku()
+            #print(self.steps)
+            if self.naked_singles():
+                difficulty += 1
+            elif self.hidden_singles():
+                difficulty += 2
+            elif (self.all_omissions()
+                    or self.group_elimination(2)):
+                difficulty += 3
+            elif (self.group_elimination(3)
+                    or self.hidden_group_elimination(2)):
+                difficulty += 4
+            elif (self.group_elimination(4)
+                    or self.hidden_group_elimination(3)
+                    or self.hidden_group_elimination(4)):
+                difficulty += 5
+            else:
+                solution_count, bf_difficulty = self.brute_force(first)
+                if solution_count:
+                    return solution_count, difficulty + bf_difficulty
+                else:
+                    return 0, -1
+        if Solver.get_free(self.grid):
+            return 0, -1
+        else:
+            return 1, difficulty
 
 
 example_sudoku = [
-9, None, None, 8, None, None, None, None, None,
-None, 6, None, 1, None, None, 7, 3, None,
-None, None, None, None, None, None, None, None, 4,
+None, None, None, None, None, 2, 5, None, None,
+None, None, 8, None, None, None, None, None, None,
+4, 9, None, 1, None, None, None, None, 6,
 
-None, None, None, 4, None, None, None, None, 6,
-None, None, 8, None, 1, None, 5, 4, None,
-None, 5, None, None, None, None, None, None, 2,
+None, None, None, None, 9, None, None, 6, None,
+None, 3, None, None, None, None, None, None, None,
+7, 1, None, 4, None, None, None, None, 9,
 
-None, 7, None, 3, None, None, 1, 5, None,
-None, None, 6, None, None, 7, None, None, None,
-None, None, None, None, None, None, 2, None, None
+None, None, 3, None, None, None, None, None, 7,
+None, None, 6, 8, None, None, None, None, None,
+8, 7, None, None, None, 1, None, 2, None
 ]
 
 sudoku = Solver(example_sudoku)
 sudoku.print_sudoku()
-sudoku.solve()
-sudoku.print_sudoku(True)
+print(sudoku.solve())
+for step in sudoku.steps:
+    print(step)
 sudoku.print_sudoku()
 
 

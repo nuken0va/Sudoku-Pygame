@@ -23,11 +23,14 @@ pygame.init()
 screen = pygame.display.set_mode((config["screen"]["width"], config["screen"]["height"]))
 pygame.display.set_caption("schizophrenia sudoku")
 clock = pygame.time.Clock()
+
+Field.init()
 field = Field()
 redo = []
 undo = []
 
 while True:
+    screen.fill((0,0,0))
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
@@ -41,8 +44,13 @@ while True:
                 dig = None
                 if event.key != K_BACKSPACE:
                     dig = int(pygame.key.name(event.key))
-                undo.append(Move(field.selected.id, dig, field.selected.get_value()))
-                field.set_cell(dig)
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    field.set_mark(dig)
+                else:
+                    field.set_cell(dig)
+                #undo.append(Move(field.selected.id, dig, field.selected.get_value()))
+                    
+            '''
             elif undo and event.key == K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
                 move = undo.pop()
                 redo.append(move)
@@ -55,6 +63,7 @@ while True:
                 dig = move.value
                 field.select_cell(move.pos.x, move.pos.y)   
                 field.set_cell(dig) 
+            '''
     field.draw(screen) 
-    pygame.display.update()
+    pygame.display.flip()
     clock.tick(30)
