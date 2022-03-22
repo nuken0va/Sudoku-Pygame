@@ -22,6 +22,25 @@ Adv:
 
 
 Sudoku Game:
-1. Add Marks
-2. Opt undo/redo for marks
-3. Light up all digits/all marks with digit
+Кнопки
+    Отрисовать
+    Проверить нажатие
+    OnClick
+
+Генерация пазлов
+    Установить количество пропусков
+
+Solver:
+    Solve -> Advice
+
+Undo/Redo:
+    Move
+        (cell, changed neigbours)
+
+Подсветка
+    По значению
+    По Заметке 
+
+Таймер
+
+Сохранить/загрузить
