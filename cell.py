@@ -6,7 +6,6 @@ import pygame
 
 from point import Point
 
-
 class Cell:
 
     __f_value: ClassVar[pygame.font.Font]
@@ -22,8 +21,8 @@ class Cell:
     __marked: bool = False
 
     def __init__(self, pos: tuple[float, float], id: Point):
-        #self.__rect = Cell.__sf_cell.get_rect(topleft=pos)
-        self.__rect = pygame.Rect(pos, (64,64))
+        # self.__rect = Cell.__sf_cell.get_rect(topleft=pos)
+        self.__rect = pygame.Rect(pos, (64, 64))
         self.__marks = []
         self.id = id
 
@@ -33,7 +32,7 @@ class Cell:
 
     def draw(self, screen: pygame.Surface):
         if self.__selected:
-            pygame.draw.rect(screen, (255,255,0), self.__rect,width=2)
+            pygame.draw.rect(screen, (255, 255,0), self.__rect,width=2)
         if self.__marked:
             pygame.draw.rect(screen, (255,0,0), self.__rect, width=4)
         if self.__value:
