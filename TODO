@@ -33,10 +33,6 @@ Sudoku Game:
 Solver:
     Solve -> Advice
 
-Undo/Redo:
-    Move
-        (cell, changed neigbours)
-
 Подсветка
     По значению
     По Заметке 

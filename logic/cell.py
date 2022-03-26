@@ -21,7 +21,6 @@ class Cell:
 
     @value.setter
     def value(self, value): 
-        self.__fixed = True
         self.__value = value 
 
     @property

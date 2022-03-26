@@ -4,8 +4,10 @@ import pygame
 from pygame.locals import *
 
 from config import load_config
-from field import Field
-from point import Move, Point
+from field import GameField
+from button import Button
+from timer import Timer
+from solution_gen import SudokuGenerator
 
 example_sudoku = [
     [9, 6, 4, 3, 8, 2, 7, 5, 1],
@@ -24,23 +26,39 @@ screen = pygame.display.set_mode((config["screen"]["width"], config["screen"]["h
 pygame.display.set_caption("schizophrenia sudoku")
 clock = pygame.time.Clock()
 
-Field.init()
-field = Field()
-redo = []
-undo = []
+gen = SudokuGenerator()
 
+GameField.init()
+Button.init()
+Timer.init()
+field = GameField(gen.gen(0))
+buttons = [Button((641,150),"undo", field.undo),
+            Button((707,150),"redo", field.redo)]
+timer = Timer((199,25))
+
+timer.restart_timer()
 while True:
     screen.fill((0,0,0))
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
+        elif event.type == MOUSEMOTION:
+            pos = pygame.mouse.get_pos()
+            for button in buttons:
+                button.hover = button.collidepoint(*pos)
         elif event.type == MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
-            field.select_colide_cell(pos[0], pos[1])
+            field.select_colide_cell(*pos)
+            for button in buttons:
+                if button.collidepoint(*pos):
+                    button.pressed = True
+                    button.on_click()
+        elif event.type == MOUSEBUTTONUP:
+            for button in buttons:
+                button.pressed = False
         elif event.type == KEYDOWN:
             if field.selected and event.key in [K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_BACKSPACE]:
-                redo = []
                 dig = None
                 if event.key != K_BACKSPACE:
                     dig = int(pygame.key.name(event.key))
@@ -48,22 +66,17 @@ while True:
                     field.set_mark(dig)
                 else:
                     field.set_cell(dig)
+                print(field.undo_list)
                 #undo.append(Move(field.selected.id, dig, field.selected.get_value()))
-                    
-            '''
-            elif undo and event.key == K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                move = undo.pop()
-                redo.append(move)
-                dig = move.prev_value
-                field.select_cell(move.pos.x, move.pos.y)   
-                field.set_cell(dig)
-            elif redo and event.key == K_y and pygame.key.get_mods() & pygame.KMOD_CTRL:    
-                move = redo.pop()
-                undo.append(move)
-                dig = move.value
-                field.select_cell(move.pos.x, move.pos.y)   
-                field.set_cell(dig) 
-            '''
+            elif event.key == K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                field.undo()
+            elif event.key == K_y and pygame.key.get_mods() & pygame.KMOD_CTRL:    
+                field.redo()
+
+    screen.fill('aliceblue')
     field.draw(screen) 
+    for button in buttons:
+        button.draw(screen)
+    timer.draw(screen)
     pygame.display.flip()
     clock.tick(30)

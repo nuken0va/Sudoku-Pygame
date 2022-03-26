@@ -4,9 +4,9 @@ from typing import Callable, ClassVar, Generator, Iterator, Optional, Union
 import random
 from dataclasses import dataclass, field
 
-from logic_cell import Cell
-from logic_field import Field
-from logic_step import Step
+from logic.cell import Cell
+from logic.field import Field
+from logic.step import Step
 
 
 class Solver():

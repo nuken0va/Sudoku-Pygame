@@ -1,12 +1,14 @@
 import random
 from itertools import product, chain
 from typing import ClassVar
-from solver import Solver, Field, Cell
+from solver import Solver
+from logic.field import Field
+from logic.cell import Cell
 
 
 class SudokuGenerator():
 
-    field: Field
+    field: Field[Cell]
     grid_step: list[int]
     grid_gen: list[list[int]]
 
@@ -92,9 +94,8 @@ class SudokuGenerator():
             solution_count, difficulty = solver.solve()
             print(field_copy)
             print(solution_count)
-            if difficulty < difficulty_input: continue
+            #if difficulty < difficulty_input: continue
             print(solver.steps)
             break
+        return field_copy.get_list()
 
-gen = SudokuGenerator()
-gen.gen(4)

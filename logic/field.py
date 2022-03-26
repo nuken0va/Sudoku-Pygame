@@ -1,11 +1,12 @@
 from itertools import chain, product
-from typing import Callable, ClassVar, Iterator
-from logic_cell import Cell
+from typing import Callable, ClassVar, Generic, Iterator, TypeVar
+from logic.cell import Cell
 
+TCell = TypeVar("TCell", bound=Cell)
 
-class Field():
-    grid: list[Cell]
-    CellGenerator: ClassVar = Callable[..., Iterator[Cell]]
+class Field(Generic[TCell]):
+    grid: list[TCell]
+    CellGenerator: ClassVar = Callable[..., Iterator[TCell]]
     
     def __init__(self, input = None):
         self.grid = []
@@ -16,6 +17,9 @@ class Field():
                 elif type(el) is set:
                     sug = el
                     el = None
+                elif isinstance(el, Cell):
+                    self.grid.append(el)
+                    continue
                 else:
                     sug = set()
                 self.grid.append(Cell(ind, el, sug))
@@ -41,7 +45,7 @@ class Field():
         """
         return len([cell for cell in block if not cell.value])
 
-    def range_column(self, index, start=0, end=9) -> Iterator[Cell]:
+    def range_column(self, index, start=0, end=9) -> Iterator[TCell]:
         for i in range(start, end):
             yield self[Cell.to_id(index, i)]
 
@@ -55,7 +59,7 @@ class Field():
             j, k = i % 3, i // 3
             yield self[Cell.to_id(x + j, y + k)]
 
-    def range_neighbours(self, cell: Cell):
+    def range_neighbours(self, cell: TCell):
         x, y = cell.index % 9, cell.index // 9
         # Column except cell
         for i in chain(range(y), range(y + 1, 9)):
@@ -72,7 +76,7 @@ class Field():
                 ):
             yield self[Cell.to_id(x_base + i, y_base + j)]
 
-    def check_cell(self, cell: Cell):
+    def check_cell(self, cell: TCell):
         for other in self.range_neighbours(cell):
             if other.value == cell.value:
                 return False
@@ -100,7 +104,9 @@ class Field():
     
     def __getitem__(self, key): return self.grid[key]
 
-    def __setitem__(self, key, value: Cell): self.grid[key] = value
+    def __setitem__(self, key, value: TCell): self.grid[key] = value
+
+    def get_list(self): return [el.value for el in self.grid]
 
     #def copy(self):
         #return Field(self.copy, self.value, self.candidates.copy())
