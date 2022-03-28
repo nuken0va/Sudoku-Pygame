@@ -1,8 +1,5 @@
-from itertools import product, chain
-from types import UnionType
-from typing import Callable, ClassVar, Generator, Iterator, Optional, Union
-import random
-from dataclasses import dataclass, field
+from itertools import  product
+from typing import Optional
 
 from logic.cell import Cell
 from logic.field import Field

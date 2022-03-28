@@ -3,15 +3,15 @@ import sys
 import pygame
 from pygame.locals import *
 
+import ui.constants
 from config import load_config
 from game.field import GameField
+from logic.solution_gen import SudokuGenerator
+from ui.button import Button
+from ui.key_button import KeyButton
 from ui.manager import GUImanager
 from ui.switch import Switch
 from ui.timer import Timer
-from ui.button import Button
-from ui.key_button import KeyButton
-from logic.solution_gen import SudokuGenerator
-import ui.constants
 
 example_sudoku = [
     [9, 6, 4, 3, 8, 2, 7, 5, 1],

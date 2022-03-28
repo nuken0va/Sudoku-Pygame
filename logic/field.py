@@ -1,5 +1,6 @@
 from itertools import chain, product
 from typing import Callable, ClassVar, Generic, Iterator, TypeVar
+
 from logic.cell import Cell
 
 TCell = TypeVar("TCell", bound=Cell)

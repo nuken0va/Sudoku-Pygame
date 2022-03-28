@@ -1,6 +1,7 @@
-from typing import Callable, ClassVar
-from logic.cell import Cell
+from typing import ClassVar
+
 import pygame
+
 
 class Timer():
     __f_dig: ClassVar[pygame.font.Font]
@@ -34,6 +35,8 @@ class Timer():
         return self.__paused
 
     def draw(self, screen: pygame.Surface):
+        if self.__paused:
+            return
         pygame.draw.rect(screen, (239, 218, 215), self.__rect)
         pygame.draw.rect(screen, (239, 218, 215), self.__rect, width=2)
         text_color = 'gray0'

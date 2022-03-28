@@ -1,9 +1,9 @@
 import random
-from itertools import product, chain
 from typing import ClassVar
-from logic.solver import Solver
-from logic.field import Field
+
 from logic.cell import Cell
+from logic.field import Field
+from logic.solver import Solver
 
 
 class SudokuGenerator():

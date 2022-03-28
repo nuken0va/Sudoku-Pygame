@@ -1,15 +1,13 @@
-from calendar import c
 from collections.abc import Iterable
 from dataclasses import dataclass
-from itertools import product
-from turtle import tracer
-
 from typing import ClassVar
-import pygame
 
-from game.cell import GameCell
+import pygame
 from logic.cell import Cell
 from logic.field import Field
+
+from game.cell import GameCell
+
 
 @dataclass
 class Transaction():

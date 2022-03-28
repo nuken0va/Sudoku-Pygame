@@ -1,10 +1,11 @@
-from dataclasses import dataclass
-from typing import Callable, ClassVar, Tuple
-from ui.GUI import GUIobject
-from ui.constants import *
-from logic.cell import Cell
+from typing import ClassVar
+
 import pygame
 import pygame.freetype
+
+from ui.constants import *
+from ui.GUI import GUIobject
+
 
 class Button(GUIobject):
     # __sf_bg: ClassVar[pygame.surface.Surface]

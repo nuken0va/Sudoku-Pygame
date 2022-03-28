@@ -1,9 +1,8 @@
-import glob
-import imp
-import random
 from typing import ClassVar
-from logic.cell import Cell
+
 import pygame
+from logic.cell import Cell
+
 
 class GameCell(Cell):
     __f_value: ClassVar[pygame.font.Font]

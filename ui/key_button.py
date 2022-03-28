@@ -1,8 +1,8 @@
-from typing import ClassVar
-from ui.button import Button
-
 import pygame
 import pygame.locals
+
+from ui.button import Button
+
 
 class KeyButton(Button):
     def __init__(self, 
