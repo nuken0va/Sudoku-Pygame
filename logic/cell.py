@@ -1,14 +1,15 @@
 from dataclasses import dataclass
+from typing import Union
 
 class Cell:
     index: int
-    candidates: set[int]
+    candidates: Union[set[int], None] 
     __value: int
     __fixed: bool
     __fixed_candidates: list[int]
     __current_candidate: list[int]
 
-    def __init__(self, index: int, value: int, candidates: set):
+    def __init__(self, index: int, value: int, candidates: Union[set, None] = None):
         self.index = index
         self.candidates = candidates
         self.__value = value
@@ -55,4 +56,7 @@ class Cell:
         return index // 9, index % 9
 
     def copy(self):
-        return Cell(self.copy, self.value, self.candidates.copy())
+        if self.candidates is None:
+            return Cell(self.index, self.value, None)
+        else:
+            return Cell(self.index, self.value, self.candidates.copy())

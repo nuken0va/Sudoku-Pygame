@@ -8,6 +8,7 @@ from typing import ClassVar
 import pygame
 
 from game.cell import GameCell
+from logic.cell import Cell
 from logic.field import Field
 
 @dataclass
@@ -26,13 +27,15 @@ class GameField:
 
     __sf_field: ClassVar[pygame.Surface]
     __rect: pygame.Rect
-    field: Field[GameCell]
+    __field: Field[GameCell]
+    __solution: Field[Cell]
+    autocerrection: bool = False
     undo_list: list[Transaction]
     redo_list: list[Transaction]
 
     selected: GameCell = None
 
-    def __init__(self, sudoku: list):
+    def __init__(self, sudoku: list, solution: list):
         self.__rect = GameField.__sf_field.get_rect(topleft=(3,147))
         self.undo_list = []
         self.redo_list = []
@@ -46,7 +49,8 @@ class GameField:
                 index,
                 value=value
                 )
-        self.field = Field(cells)
+        self.__field = Field(cells)
+        self.__solution = Field(solution)
 
     def init():
         GameField.__sf_field = pygame.image.load("res\\field.png").convert()
@@ -56,23 +60,45 @@ class GameField:
         return self.__rect.collidepoint(x, y)
 
     def deselect(self):
-        for cell in self.field.grid:
+        for cell in self.__field.grid:
             cell.selected = False
             cell.neigbour = False
 
     def select_colide_cell(self, x: float, y: float):
-        for cell in self.field.grid:
+        for cell in self.__field.grid:
             if cell.collidepoint(x, y):
                 self.select_cell(cell.index)
     
     def select_cell(self, index: int):
         self.deselect()
-        self.selected = self.field[index]
-        self.field[index].selected = True
-        for other in self.field.range_neighbours(self.selected):
+        self.selected = self.__field[index]
+        self.__field[index].selected = True
+        for other in self.__field.range_neighbours(self.selected):
             other.neigbour = True
     
     def check_solution(self) -> bool:
+        for cell in self.__field.grid: cell.reset_highlight()
+    
+        if self.autocerrection:
+            correct = self.autocorrect_solution()
+        correct = self.check_conflicts()
+
+        return correct
+
+    def autocorrect_solution(self) -> bool:
+        correct = True
+        for i in range(81):
+            if self.__field[i].value is None:
+                correct = False
+                continue
+            if self.__field[i].value != self.__solution[i].value:
+                self.__field[i].incorrect = True
+                correct = False
+        return correct
+
+    def check_conflicts(self) -> bool:
+        correct = True
+
         def check_iter(cells: Iterable[GameCell]) -> bool:
             correct = True
             digs: dict[int, GameCell] = {}
@@ -80,8 +106,8 @@ class GameField:
                 value = cell.get_value()
                 if value:
                     if value in digs:
-                        digs[value].mark()
-                        cell.mark()
+                        digs[value].conflict = True
+                        cell.conflict = True
                         correct = False
                     else:
                         digs[value] = cell
@@ -89,18 +115,17 @@ class GameField:
                     correct = False
             return correct
 
-        for cell in self.field.grid: cell.unmark()
-        correct = True
         for i in range(9):
-            correct &= check_iter(self.field.range_column(i))
-            correct &= check_iter(self.field.range_row(i))
-            correct &= check_iter(self.field.range_minigrid(i))
+            correct &= check_iter(self.__field.range_column(i))
+            correct &= check_iter(self.__field.range_row(i))
+            correct &= check_iter(self.__field.range_minigrid(i))
+            
         return correct
 
     def set_cell(self, value: int, index: int = None, check: bool = True) -> bool:
         correct = False
         if index: 
-            cell = self.field[index]
+            cell = self.__field[index]
         else:
             cell = self.selected
         if (not cell 
@@ -120,11 +145,11 @@ class GameField:
         if cell.marks:
             transaction.previous_marks = cell.marks.copy()
         
-        cell.set_value(value)
+        transaction.previous_marks = cell.set_value(value)
 
         # Update neigbour cells 
         if self.auto_update_neigbours:
-            for other in self.field.range_neighbours(cell):
+            for other in self.__field.range_neighbours(cell):
                 if value in other.marks:
                     other.marks.remove(value)
                     transaction.secondary_cells.append(other)
@@ -139,7 +164,7 @@ class GameField:
     def set_mark(self, value: int, index: int = None) -> bool:
         result = False
         if index: 
-            cell = self.field[index]
+            cell = self.__field[index]
         else:
             cell = self.selected
         if not cell or cell.value:
@@ -195,5 +220,5 @@ class GameField:
 
     def draw(self, screen: pygame.Surface):
         screen.blit(GameField.__sf_field, self.__rect)
-        for cell in self.field:
+        for cell in self.__field:
             cell.draw(screen)

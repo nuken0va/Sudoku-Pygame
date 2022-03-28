@@ -7,27 +7,36 @@ TCell = TypeVar("TCell", bound=Cell)
 class Field(Generic[TCell]):
     grid: list[TCell]
     CellGenerator: ClassVar = Callable[..., Iterator[TCell]]
+    __candidates: bool
     
-    def __init__(self, input = None):
+    def __init__(self, input = None, candidates=False):
         self.grid = []
+        self.__candidates = candidates
         if type(input) == list:
-            for ind, el in enumerate(input):
-                if el is None:
-                    sug = {i for i in range(1, 10)}
-                elif type(el) is set:
-                    sug = el
-                    el = None
-                elif isinstance(el, Cell):
-                    self.grid.append(el)
+            for index, element in enumerate(input):
+                if isinstance(element, Cell):
+                    self.grid.append(element)
+                    if (candidates 
+                       and element.value is None
+                       and element.candidates is None
+                       ):
+                       element.candidates = set()
                     continue
-                else:
-                    sug = set()
-                self.grid.append(Cell(ind, el, sug))
-        elif type(input) == Field:
+                cand = None
+                if element is None and candidates:
+                    cand = {i for i in range(1, 10)}
+                elif isinstance(element, set):
+                    if candidates:
+                        cand = element
+                    element = None
+                self.grid.append(Cell(index, element, cand))
+
+        elif isinstance(input, Field):
             for el in input.grid:
-                self.grid.append(Cell(el.index,
-                                      el.value,
-                                      el.candidates.copy()))
+                self.grid.append(el.copy())
+            if candidates and candidates != input.__candidates:
+                for el in self.grid:
+                    el.candidates = {i for i in range(1, 10)}
 
     def get_minigrid_id(x, y):
         """
@@ -94,7 +103,8 @@ class Field(Generic[TCell]):
                 else:
                     result += " "
                     for i in range(substr * 3 + 1, substr * 3 + 4):
-                        if i in self[Cell.to_id(column, row)].candidates:
+                        if (self[Cell.to_id(column, row)].candidates
+                            and i in self[Cell.to_id(column, row)].candidates):
                             result += str(i)
                         else:
                             result += " "
@@ -108,5 +118,5 @@ class Field(Generic[TCell]):
 
     def get_list(self): return [el.value for el in self.grid]
 
-    #def copy(self):
-        #return Field(self.copy, self.value, self.candidates.copy())
+    def copy(self):
+        return Field(self, self.__candidates)

@@ -21,7 +21,11 @@ class GUIobject(ABC):
         pass
 
     @abstractmethod
-    def on_hovered(self) -> None:
+    def on_enter(self) -> None:
+        pass
+
+    @abstractmethod
+    def on_release(self) -> None:
         pass
 
     @abstractmethod

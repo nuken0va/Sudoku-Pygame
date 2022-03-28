@@ -14,7 +14,8 @@ class GameCell(Cell):
 
     selected: bool = False
     neigbour: bool = False
-    marked: bool = False
+    conflict: bool = False
+    incorrect: bool = False
 
     def __init__(self, pos: tuple[float, float], index: int, value: int = None):
         self.__rect = pygame.Rect(pos, (64, 64))
@@ -32,7 +33,9 @@ class GameCell(Cell):
             pygame.draw.rect(screen, 'lightskyblue1', self.__rect)
         
         text_color = 'dodgerblue4'
-        if self.marked:
+        if self.incorrect:
+            text_color = 'orange'
+        if self.conflict:
             text_color = 'orangered'
         elif self.fixed:
             text_color = 'gray0'
@@ -54,11 +57,8 @@ class GameCell(Cell):
                 screen.blit(text, text_rect)
 
     def set_value(self, value):
-        marks = self.marks
         self.marks = []
         self.value = value
-        #if self.__value:
-        #    self.__type = random.randrange(len(Cell.__sf_dig[value - 1]))
 
     def set_mark(self, value):
         if self.value:
@@ -85,8 +85,6 @@ class GameCell(Cell):
     def deselect(self):
         self.selected = False
 
-    def mark(self):
-        self.marked = True
-
-    def unmark(self):
-        self.marked = False
+    def reset_highlight(self):
+        self.conflict = False
+        self.incorrect = False

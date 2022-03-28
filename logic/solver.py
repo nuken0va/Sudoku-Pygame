@@ -10,7 +10,7 @@ from logic.step import Step
 
 
 class Solver():
-    field: Field
+    __field: Field
     solution_exists: bool = True
     steps: list[Step]
 
@@ -18,17 +18,24 @@ class Solver():
         """
         Returns True if every empty cell has at least 1 candidate
         """
-        return all(cell.value or len(cell.candidates) for cell in self.field.grid)
+        return all(cell.value or len(cell.candidates) for cell in self.__field.grid)
 
-    def __init__(self, input):
-        self.field = Field(input)
+    def __init__(self, input = None):
+        if input:
+            self.__field = Field(input, candidates=True)
         self.steps = []
+
+    @property
+    def field(self): return self.field
+
+    @field.setter
+    def field(self, new_field): self.__field = Field(input, candidates=True)
 
     def update_grid(self, cell: Cell) -> None:
         """
         Deletes cell.value from cell neighbours' candidates
         """
-        for other in self.field.range_neighbours(cell):
+        for other in self.__field.range_neighbours(cell):
             other.candidates.discard(cell.value)
 
     def __set_value(self, cell: Cell, value: int) -> None:
@@ -41,10 +48,10 @@ class Solver():
         CRME method.
         Scans neighbor cells to eliminate candidates
         """
-        for cell in self.field.grid:
+        for cell in self.__field.grid:
             if cell.value:
                 continue
-            for other in self.field.range_neighbours(cell):
+            for other in self.__field.range_neighbours(cell):
                 cell.candidates.discard(other.value)
         return False
 
@@ -53,7 +60,7 @@ class Solver():
         Naked Singles method
         Fill the cells that only have 1 candidate 
         """
-        for cell in self.field.grid:
+        for cell in self.__field.grid:
             if cell.value:
                 continue
             if len(cell.candidates) == 1:
@@ -70,9 +77,9 @@ class Solver():
         to find unique ones
         """
         for digit, i in product(range(1, 10), range(9)):
-            for block in [self.field.range_column(i),
-                          self.field.range_row(i),
-                          self.field.range_minigrid(i)
+            for block in [self.__field.range_column(i),
+                          self.__field.range_row(i),
+                          self.__field.range_minigrid(i)
                           ]:
                 group = [cell for cell in block
                          if not cell.value and digit in cell.candidates]
@@ -146,9 +153,9 @@ class Solver():
         to find naked indpendend groups
         """
         updated = False
-        for i, block in product(range(9), [self.field.range_row,
-                                           self.field.range_column,
-                                           self.field.range_minigrid]
+        for i, block in product(range(9), [self.__field.range_row,
+                                           self.__field.range_column,
+                                           self.__field.range_minigrid]
                                 ):
             group, candidates = self.__build_group(group_size, block, i)
             if group is None or candidates is None:
@@ -195,9 +202,9 @@ class Solver():
                 range(0, 9, 3),
                 range(3)):
             result = False
-            column = set(self.field.range_column(x + offset))
-            row = set(self.field.range_row(y + offset))
-            grid = set(self.field.range_minigrid(Field.get_minigrid_id(x, y)))
+            column = set(self.__field.range_column(x + offset))
+            row = set(self.__field.range_row(y + offset))
+            grid = set(self.__field.range_minigrid(Field.get_minigrid_id(x, y)))
             result |= self.__omission(column, grid)
             result |= self.__omission(row, grid)
             result |= self.__omission(grid, column)
@@ -243,9 +250,9 @@ class Solver():
         return None, None
 
     def hidden_group_elimination(self, group_size):
-        for i, block in product(range(9), [self.field.range_row,
-                                           self.field.range_column,
-                                           self.field.range_minigrid]
+        for i, block in product(range(9), [self.__field.range_row,
+                                           self.__field.range_column,
+                                           self.__field.range_minigrid]
                                 ):
             digits = []
             updated = False
@@ -268,18 +275,18 @@ class Solver():
         return False
 
     def old_brute_force(self, first=True):
-        bf = min((cell for cell in self.field.grid if not cell.value), key=lambda cell: len(cell.candidates))
+        bf = min((cell for cell in self.__field.grid if not cell.value), key=lambda cell: len(cell.candidates))
         total_colutions = 0
         #self.print_sudoku(True)
         for candidate in bf.candidates:
             #print(f"Brute Force cell {bf.index}: try {candidate}")
-            self.field[bf.index] = Cell(bf.index, candidate, set())
-            solver = Solver(self.field)
+            self.__field[bf.index] = Cell(bf.index, candidate, set())
+            solver = Solver(self.__field)
             solution_count, difficulty = solver.solve(first)
             #print(f"Brute Force {solution_count = }")
             if solution_count:
                 if first:
-                    self.field = solver.field
+                    self.__field = solver.__field
                     self.steps.append(Step("Brute Force", {"size":len(bf.candidates), "id": bf.index, "value": candidate}))
                     self.steps += solver.steps
                     return solution_count, difficulty
@@ -296,12 +303,12 @@ class Solver():
     def brute_force(self, first=True):
         solution_count = 0
         current_cell = 0
-        free_cells = [cell for cell in self.field if not cell.value]
+        free_cells = [cell for cell in self.__field if not cell.value]
         while True:
             # Find solution
             while 0 <= current_cell < len(free_cells):
                 if free_cells[current_cell].next_candidate():
-                    if self.field.check_cell(free_cells[current_cell]):
+                    if self.__field.check_cell(free_cells[current_cell]):
                         current_cell += 1
                 else:
                     free_cells[current_cell].reset_candidate()
@@ -325,7 +332,7 @@ class Solver():
         """
         difficulty = 0
         self.init_candidates()
-        while Field.get_free(self.field.grid) and self.check_candidates():
+        while Field.get_free(self.__field.grid) and self.check_candidates():
             #self.print_sudoku()
             #print(self.steps)
             if self.naked_singles():
@@ -348,7 +355,7 @@ class Solver():
                     return 1, 5
                 else:
                     return 0, -1
-        if Field.get_free(self.field.grid):
+        if Field.get_free(self.__field.grid):
             return 0, -1
         else:
             return 1, difficulty
@@ -359,7 +366,7 @@ class Solver():
         """
         difficulty = 0
         self.init_candidates()
-        while Field.get_free(self.field.grid) and self.check_candidates():
+        while Field.get_free(self.__field.grid) and self.check_candidates():
             #self.print_sudoku()
             #print(self.steps)
             if self.naked_singles():
@@ -373,7 +380,7 @@ class Solver():
                     return 1, 5
                 else:
                     return 0, -1
-        if Field.get_free(self.field.grid):
+        if Field.get_free(self.__field.grid):
             return 0, -1
         else:
             return 1, difficulty
