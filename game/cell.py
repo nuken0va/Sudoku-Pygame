@@ -22,8 +22,8 @@ class GameCell(Cell):
         super().__init__(index, value, None)
 
     def init():
-        GameCell.__f_value = pygame.font.Font("dig\\Saenensis.otf", 64)
-        GameCell.__f_marks = pygame.font.Font("dig\\Saenensis.otf", 20)
+        GameCell.__f_value = pygame.font.Font("res\\fonts\\Saenensis.otf", 64)
+        GameCell.__f_marks = pygame.font.Font("res\\fonts\\Saenensis.otf", 20)
 
     def draw(self, screen: pygame.Surface):
         if self.selected:

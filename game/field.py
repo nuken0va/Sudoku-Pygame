@@ -7,7 +7,7 @@ from turtle import tracer
 from typing import ClassVar
 import pygame
 
-from cell import GameCell
+from game.cell import GameCell
 from logic.field import Field
 
 @dataclass
@@ -49,8 +49,11 @@ class GameField:
         self.field = Field(cells)
 
     def init():
-        GameField.__sf_field = pygame.image.load("dig\\sudoku.png").convert()
+        GameField.__sf_field = pygame.image.load("res\\field.png").convert()
         GameCell.init()
+
+    def collidepoint(self, x: float, y: float) -> bool:
+        return self.__rect.collidepoint(x, y)
 
     def deselect(self):
         for cell in self.field.grid:
