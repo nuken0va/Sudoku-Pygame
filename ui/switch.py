@@ -2,22 +2,16 @@ from typing import ClassVar
 
 import pygame
 import pygame.freetype
+from ui.button import Button
 
 from ui.constants import *
-from ui.GUI import GUIobject
 
 
-class Switch(GUIobject):
-    __f_text: ClassVar[pygame.freetype.Font]
-    __sf_icon: pygame.surface.Surface
-    __sf_alt_icon: pygame.surface.Surface
-    __text: str = None
-    __alt_text: str = None
-    __text_color = None
-    __hover: bool = False
-    __pressed: bool = False
-    __state: bool = False
-    __type: str
+class Switch(Button):
+    _sf_alt_icon: pygame.surface.Surface
+    _alt_text: str = None
+    _state: bool = False
+    _type: str
 
     def __init__(self, 
                  pos: tuple[float, float], 
@@ -27,35 +21,38 @@ class Switch(GUIobject):
                  text_false: str = None,
                  text_true: str = None,
                  text_color = (0,0,0),
+                 init_state = False,
                  id = None
                  ):
+        self._state = init_state
         if text_false and text_true and font_filename: 
-            self.__type = "text"
-            self.__f_text = pygame.freetype.Font("res\\fonts\\" + font_filename, 32)
-            self.__text_color = text_color
-            self.__text = text_false
-            self.__alt_text = text_true
+            self._alt_text = text_true
+            super().__init__(pos = pos, 
+                             font_filename = font_filename,
+                             str = text_false,
+                             text_color = text_color,
+                             id = id
+                             )
         elif icon_false_filename and icon_true_filename:
-            self.__type = "icon"
-            self.__sf_icon = pygame.image.load("res\\ico\\" + icon_false_filename).convert_alpha() 
-            self.__sf_alt_icon = pygame.image.load("res\\ico\\" + icon_true_filename).convert_alpha() 
-        self.__rect = pygame.rect.Rect(pos,(64,64))
-        super().__init__(id)
-
-    def collidepoint(self, x: float, y: float) -> bool:
-        return self.__rect.collidepoint(x, y)
+            self._sf_alt_icon = pygame.image.load("res\\ico\\" + icon_true_filename).convert_alpha() 
+            super().__init__(pos = pos, 
+                             icon_filename = icon_false_filename,
+                             id = id
+                             )
+        if init_state:
+            self.swap()
 
     def on_enter(self):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_ENTER, event_data))
 
-        self.__hover = True
+        self._hover = True
 
     def on_leave(self):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_LEAVE, event_data))
 
-        self.__hover = False
+        self._hover = False
 
     def on_click(self):
         self.swap()
@@ -63,46 +60,23 @@ class Switch(GUIobject):
                       'state': self.state}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_CLICK, event_data))
 
-        self.__pressed = True
+        self._pressed = True
 
     def on_release(self): 
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_RELEASE, event_data))
 
-        self.__pressed = False
+        self._pressed = False
 
     def swap(self):
-        self.__state = not self.__state
-        self.__text, self.__alt_text = self.__alt_text, self.__text
-        self.__sf_icon, self.__sf_alt_icon = self.__sf_alt_icon, self.__sf_icon
+        self._state = not self._state
+        self._text, self._alt_text = self._alt_text, self._text
+        self._sf_icon, self._sf_alt_icon = self._sf_alt_icon, self._sf_icon
     
     @property
-    def state(self): return self.__state
+    def state(self): return self._state
 
     @state.setter
     def state(self, value: bool):
-        if self.__state != value:
+        if self._state != value:
             self.swap()
-        
-    @property
-    def pressed(self): return self.__pressed
-
-    @property
-    def hover(self): return self.__hover
-
-    def draw(self, screen: pygame.Surface):
-        if self.__pressed:
-            pygame.draw.rect(screen, 'azure3', self.__rect)
-        elif self.__hover:
-            pygame.draw.rect(screen, 'azure', self.__rect)
-        else: 
-            pygame.draw.rect(screen, (154, 208, 236), self.__rect)
-        if self.__type == "icon":
-            screen.blit(self.__sf_icon, self.__rect)
-        elif self.__type == "text":
-            text, text_rect = self.__f_text.render(self.__text, self.__text_color)
-            text_rect = text.get_rect(center = self.__rect.center)
-            screen.blit(text, text_rect)
-            
-        
-

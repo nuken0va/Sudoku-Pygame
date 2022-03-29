@@ -68,7 +68,7 @@ class SudokuGenerator():
                     count -= 1
 
     def gen(self):
-        start, stop = SudokuGenerator.difficulty_levels[1]
+        start, stop = SudokuGenerator.difficulty_levels[3]
         count = random.randrange(start, stop)
         while True:
             field_copy = self.field.copy()

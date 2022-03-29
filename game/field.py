@@ -7,6 +7,7 @@ from logic.cell import Cell
 from logic.field import Field
 
 from game.cell import GameCell
+from logic.solver import Solver
 
 
 @dataclass
@@ -21,22 +22,27 @@ class Transaction():
 
 class GameField:
 
-    auto_update_neigbours: bool = True
+    auto_update_neigbours: bool = False
+    auto_cerrection: bool = False
 
     __sf_field: ClassVar[pygame.Surface]
     __rect: pygame.Rect
     __field: Field[GameCell]
     __solution: Field[Cell]
-    autocerrection: bool = False
-    undo_list: list[Transaction]
-    redo_list: list[Transaction]
+
+    highlight: bool = False
+    highlight_marks: bool = False
+    highlight_value: int = 0
+
+    _undo_list: list[Transaction]
+    _redo_list: list[Transaction]
 
     selected: GameCell = None
 
     def __init__(self, sudoku: list, solution: list):
         self.__rect = GameField.__sf_field.get_rect(topleft=(3,147))
-        self.undo_list = []
-        self.redo_list = []
+        self._undo_list = []
+        self._redo_list = []
         cells = [None for j in range(81)]
         for index, value in enumerate(sudoku):
             x, y = index // 9, index % 9
@@ -77,7 +83,7 @@ class GameField:
     def check_solution(self) -> bool:
         for cell in self.__field.grid: cell.reset_highlight()
     
-        if self.autocerrection:
+        if self.auto_cerrection:
             correct = self.autocorrect_solution()
         correct = self.check_conflicts()
 
@@ -133,7 +139,7 @@ class GameField:
         ):
             return correct
             
-        self.redo_list.clear()
+        self._redo_list.clear()
 
         transaction = Transaction(main_cell=cell,
                                   previous_value=cell.value,
@@ -143,7 +149,7 @@ class GameField:
         if cell.marks:
             transaction.previous_marks = cell.marks.copy()
         
-        transaction.previous_marks = cell.set_value(value)
+        cell.set_value(value)
 
         # Update neigbour cells 
         if self.auto_update_neigbours:
@@ -156,7 +162,7 @@ class GameField:
         if check: 
             correct = self.check_solution()
         # Save transaction
-        self.undo_list.append(transaction)
+        self._undo_list.append(transaction)
         return correct
 
     def set_mark(self, value: int, index: int = None) -> bool:
@@ -168,7 +174,7 @@ class GameField:
         if not cell or cell.value:
             return result
         
-        self.redo_list.clear()
+        self._redo_list.clear()
         transaction = Transaction(main_cell=cell)
 
         if value:
@@ -177,13 +183,13 @@ class GameField:
             transaction.previous_marks = cell.marks.copy()
         cell.set_mark(value)
 
-        self.undo_list.append(transaction)
+        self._undo_list.append(transaction)
         return result
 
     def undo(self):
-        if not self.undo_list:
+        if not self._undo_list:
             return
-        transaction = self.undo_list.pop()
+        transaction = self._undo_list.pop()
         cell = transaction.main_cell
 
         if transaction.mark:
@@ -195,14 +201,14 @@ class GameField:
         if transaction.previous_marks is not None:
             cell.marks = transaction.previous_marks.copy()
         
-        self.redo_list.append(transaction)
+        self._redo_list.append(transaction)
         if not transaction.mark: 
             self.check_solution()
 
     def redo(self):
-        if not self.redo_list:
+        if not self._redo_list:
             return
-        transaction = self.redo_list.pop()
+        transaction = self._redo_list.pop()
         cell = transaction.main_cell
         
         if transaction.mark:
@@ -212,9 +218,52 @@ class GameField:
             for other in transaction.secondary_cells:
                 other.marks.remove(transaction.value)
 
-
-        self.undo_list.append(transaction)
+        self._undo_list.append(transaction)
         self.check_solution()
+
+    def __clear_highlights(self):
+        for cell in self.__field:
+            cell.marks_higlight_value = 0
+            cell.higlighted = False
+            cell.higlighted_neigbour = False
+
+    def __cells_highlights(self):
+        for cell in self.__field:
+            if cell.value == self.highlight_value:
+                cell.higlighted = True
+                for other in self.__field.range_neighbours(cell):
+                    other.higlighted_neigbour = True
+
+    def __marks_highlights(self):
+        for cell in self.__field:
+            #cell.marks_higlight = True
+            cell.marks_higlight_value = self.highlight_value
+
+    def update_highlights(self):
+        # Reset all highlights
+        self.__clear_highlights()
+
+        # Marks Highlight
+        if self.highlight_value and self.highlight_marks:
+            self.__marks_highlights()
+            
+        # Cells Highlight
+        elif self.highlight_value and self.highlight:
+            self.__cells_highlights()
+
+    def auto_crme(self):
+        solver = Solver(self.__field)
+        solver.init_candidates()
+        for index, cell in enumerate(self.__field):
+            if cell.value:
+                continue
+            elif cell.marks:
+                for mark in cell.marks:
+                    if mark not in solver.field[index].candidates:
+                        cell.marks.remove(mark)
+            else:
+                cell.marks = list(solver.field[index].candidates)
+                
 
     def draw(self, screen: pygame.Surface):
         screen.blit(GameField.__sf_field, self.__rect)

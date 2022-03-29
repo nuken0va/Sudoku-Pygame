@@ -13,44 +13,40 @@ from ui.manager import GUImanager
 from ui.switch import Switch
 from ui.timer import Timer
 
-example_sudoku = [
-    [9, 6, 4, 3, 8, 2, 7, 5, 1],
-    [3, 8, 5, 7, 1, 6, 9, 2, 4],
-    [2, 1, 7, 4, 9, 5, 8, 3, 6],
-    [7, 9, 3, 6, 4, 1, 2, 8, 5],
-    [6, 5, 2, 8, 3, 7, 1, 4, 9],
-    [1, 4, 8, 5, 2, 9, 3, 6, 7],
-    [5, 3, 9, 1, 6, 8, 4, 7, 2],
-    [4, 7, 1, 2, 5, 3, 6, 9, 8],
-    [8, 2, 6, 9, 7, 4, 5, 1, 3]]
-
 config = load_config()
 pygame.init()
 screen = pygame.display.set_mode((config["screen"]["width"], config["screen"]["height"]))
-pygame.display.set_caption("schizophrenia sudoku")
+pygame.display.set_caption("Sudoku")
 clock = pygame.time.Clock()
 
 gen = SudokuGenerator()
-
 
 GameField.init()
 Button.init()
 Timer.init()
 field = GameField(*gen.gen())
+#field = GameField([None, None, None, None, 5, None, 7, 8, None, 4, None, None, 7, 8, None, 1, 2, None, None, None, None, None, None, None, 4, None, None, None, None, None, None, None, None, None, None, None, 3, None, 5, None, None, 7, None, None, None, None, None, 7, 2, 1, None, None, None, 5, None, 3, None, None, 4, 2, 9, None, None, None, None, 2, 9, None, 8, None, 3, None, 9, 7, None, None, None, 1, 6, 4, 2], [1, 2, 3, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 1, 2, 3, 7, 8, 9, 1, 2, 3, 4, 5, 6, 2, 1, 4, 3, 6, 5, 8, 9, 7, 3, 6, 5, 8, 9, 7, 2, 1, 4, 8, 9, 7, 2, 1, 4, 3, 6, 5, 5, 3, 1, 6, 4, 2, 9, 7, 8, 6, 4, 2, 9, 7, 8, 5, 3, 1, 9, 7, 8, 5, 3, 1, 6, 4, 2])
 pause_font = pygame.freetype.Font("res\\fonts\\Saenensis.otf", 32)
 
 gui_manager = GUImanager(Button((641,150), icon_filename="undo.png", id="ui_button_undo"),
                          Button((707,150), icon_filename="redo.png", id="ui_button_redo"),
-                        #Switch((641,216), icon_false_filename="bulb2.png",
-                        #                  icon_true_filename="bulb.png"),
+                         Switch((641,216), icon_false_filename="eye_closed.png",
+                                           icon_true_filename="eye_opened2.png",
+                                           id="ui_button_highlight"),
                          Switch((707,216), icon_false_filename="pen2.png",
                                            icon_true_filename="pen.png",
                                            id="ui_switch_candidate"),
 
-                        #Button((483,41),"auto_candidate.png"),
-                         Switch((417,41), icon_false_filename="auto_correction2.png",
+                         Switch((420,41), icon_false_filename="auto_candidate2.png",
+                                          icon_true_filename="auto_candidate.png",
+                                          id="ui_button_auto_candidate"),
+                         Button((486,41),"fill.png", id="ui_button_fill_candidate"),
+                         Switch((552,41), icon_false_filename="auto_correction2.png",
                                           icon_true_filename="auto_correction.png",
                                           id="ui_switch_correction"),
+                         Button((618,41),"hint.png", id="ui_button_hint"),
+
+                         Timer((202,25), id="ui_timer"),
 
                          KeyButton((608, 349), K_1, font_filename="Saenensis.otf", text="1"),
                          KeyButton((674, 349), K_2, font_filename="Saenensis.otf", text="2"),
@@ -60,17 +56,17 @@ gui_manager = GUImanager(Button((641,150), icon_filename="undo.png", id="ui_butt
                          KeyButton((740, 415), K_6, font_filename="Saenensis.otf", text="6"),
                          KeyButton((608, 481), K_7, font_filename="Saenensis.otf", text="7"),
                          KeyButton((674, 481), K_8, font_filename="Saenensis.otf", text="8"),
-                         KeyButton((740, 481), K_9, font_filename="Saenensis.otf", text="9")
+                         KeyButton((740, 481), K_9, font_filename="Saenensis.otf", text="9"),
+                         KeyButton((674, 547), K_BACKSPACE, font_filename="Saenensis.otf", text="_")
                         )
 
-timer = Timer((199,25))
-pic = pygame.image.load("res\\pic.png").convert_alpha() 
-pic_rect = pic.get_rect(bottomright=(880,800))
+# Game states:
 pause = False
 end_game = False
 candidate_mode = False
+highlight_mode = False
 
-timer.restart()
+gui_manager["ui_timer"].restart()
 while True:
     if pause:
         screen.fill((21, 114, 161))
@@ -81,8 +77,8 @@ while True:
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == MOUSEBUTTONDOWN and timer.collidepoint(*pos):
-                pause = timer.pause()
+            elif event.type == MOUSEBUTTONDOWN:
+                pause = gui_manager["ui_timer"].pause()
 
     elif end_game:
         screen.fill((21, 114, 161))
@@ -102,20 +98,20 @@ while True:
                 sys.exit()
             elif event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                if field.collidepoint(*pos):
+                if (not highlight_mode) and field.collidepoint(*pos):
                     field.select_colide_cell(*pos)
-                elif timer.collidepoint(*pos):
-                    pause = timer.pause()
 
             elif event.type == KEYDOWN:
-                print(event)
-                if field.selected and event.key in [K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_BACKSPACE]:
+                if event.key in [K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_BACKSPACE]:
                     dig = None
                     if event.key not in [K_BACKSPACE, K_DELETE]:
                         dig = int(pygame.key.name(event.key))
-                    if  candidate_mode:
+                    if highlight_mode:
+                        field.highlight_value = dig
+                        field.update_highlights()
+                    elif candidate_mode and field.selected:
                         field.set_mark(dig)
-                    else:
+                    elif field.selected:
                         end_game = field.set_cell(dig)                        
 
                 elif event.key == K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
@@ -124,39 +120,52 @@ while True:
                     field.redo()
                 elif event.key == K_a and pygame.key.get_mods() & pygame.KMOD_CTRL: 
                     gui_manager["ui_switch_correction"].swap()
-                    field.autocerrection = not field.autocerrection
+                    field.auto_cerrection = not field.auto_cerrection
                     field.check_solution()
-
-                elif event.key == K_LCTRL or event.key == K_RCTRL:
-                    gui_manager["ui_switch_candidate"].state = True
-                    candidate_mode = True
-
-            elif event.type == KEYUP:
-                if event.key == K_LCTRL or event.key == K_RCTRL:
-                    gui_manager["ui_switch_candidate"].state = False
-                    candidate_mode = False
 
             elif event.type == ui.constants.UI_BUTTON_ON_CLICK:
                 if event.ui_element.id == "ui_button_undo":
                     field.undo()
                 elif event.ui_element.id == "ui_button_redo":
                     field.redo()
+                elif event.ui_element.id == "ui_button_fill_candidate":
+                    field.auto_crme()
                 else:
                     print("click")
 
             elif event.type == ui.constants.UI_SWITCH_ON_CLICK:
                 if event.ui_element.id == "ui_switch_candidate":
                     candidate_mode = event.state
-                if event.ui_element.id == "ui_switch_correction":
-                    field.autocerrection = not field.autocerrection
+                    if highlight_mode:
+                        field.highlight_marks = event.state
+                        field.update_highlights()
+
+                elif event.ui_element.id == "ui_button_highlight":
+                    highlight_mode = event.state
+                    field.highlight = event.state
+                    if highlight_mode:
+                        field.deselect()
+                        field.highlight_marks = candidate_mode
+                    else:
+                        field.highlight_marks = False
+                        field.highlight_value = 0
+                    field.update_highlights()
+
+                elif event.ui_element.id == "ui_switch_correction":
+                    field.auto_cerrection = not field.auto_cerrection
                     field.check_solution()
+                    
+                elif event.ui_element.id == "ui_switch_auto_candidate":
+                    field.auto_update_neigbours = event.state
+                
+
+            elif event.type == ui.constants.UI_TIMER_ON_CLICK:
+                pause = event.ui_element.pause()
 
         
 
         screen.fill((21, 114, 161))
         field.draw(screen) 
         gui_manager.draw(screen)
-        timer.draw(screen)
-        #screen.blit(pic, pic_rect)
     pygame.display.flip()
     clock.tick(30)

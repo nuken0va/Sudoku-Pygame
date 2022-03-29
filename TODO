@@ -5,15 +5,9 @@ Sudoku Game:
 Solver:
     Solve -> Advice
 
-Подсветка
-    По значению
-    По Заметке 
-
 Сохранить/загрузить
 
 FontManager
 
 Декоратор для Solver а
 -> Hint
--> Auto Candidate
-

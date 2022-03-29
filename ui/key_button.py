@@ -17,10 +17,10 @@ class KeyButton(Button):
                  unicod = None,
                  scancode = None
                  ):
-        self.__key = key
-        self.__mod = mod
-        self.__unicode = unicod
-        self.__scancode = scancode
+        self._key = key
+        self._mod = mod
+        self._unicode = unicod
+        self._scancode = scancode
         super().__init__(pos, 
                          icon_filename=icon_filename,
                          font_filename=font_filename,
@@ -30,10 +30,10 @@ class KeyButton(Button):
                          )
     
     def on_click(self):
-        event_data = {'key': self.__key,
-                      'mod': self.__mod,
-                      'unicode': self.__unicode,
-                      'scancode': self.__scancode}
+        event_data = {'key': self._key,
+                      'mod': self._mod,
+                      'unicode': self._unicode,
+                      'scancode': self._scancode}
         pygame.event.post(pygame.event.Event(pygame.locals.KEYDOWN, event_data))
 
-        self.__pressed = True
+        self._pressed = True

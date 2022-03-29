@@ -23,7 +23,7 @@ class Solver():
         self.steps = []
 
     @property
-    def field(self): return self.field
+    def field(self): return self.__field
 
     @field.setter
     def field(self, new_field): self.__field = Field(input, candidates=True)
