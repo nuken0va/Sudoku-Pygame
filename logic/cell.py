@@ -28,6 +28,7 @@ class Cell:
 
     def fix_candidate(self):
         self.__fixed_candidates = list(self.candidates)
+        self.__fixed_candidates.sort()
         self.__current_candidate = 0
 
     def next_candidate(self):
@@ -41,6 +42,7 @@ class Cell:
             return 0
     
     def reset_candidate(self):
+        self.__value = None
         self.__current_candidate = 0
 
     def __hash__(self):

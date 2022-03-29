@@ -2,6 +2,7 @@ import pygame
 import pygame.locals
 
 from ui.button import Button
+from ui.constants import *
 
 
 class KeyButton(Button):
@@ -11,7 +12,7 @@ class KeyButton(Button):
                  icon_filename: str = "",
                  font_filename: str = "",
                  text: str = None,
-                 text_color = (0,0,0),
+                 text_color = COLOR_TEXT,
                  id = None,
                  mod = 0,
                  unicod = None,

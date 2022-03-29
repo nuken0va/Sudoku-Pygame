@@ -10,6 +10,8 @@ class Timer(Button):
     __start_time: int = 0
     __time_passed: int = 0
     __paused: bool = False
+    __display_text: str = ""
+    __display_end_time: int
     '''
     __pause_size_coef: float = 1.02
     __pause_size: float = 12.00
@@ -21,13 +23,15 @@ class Timer(Button):
         super().__init__(pos=pos, id=id)
         self._rect = pygame.rect.Rect(pos,(202,96))
         self._f_text = pygame.freetype.Font("res\\fonts\\digital.ttf", 64)
+        self._sf_mask = pygame.image.load("res\\timer_frame.png").convert_alpha() 
+        self._text_color = COLOR_DISPLAY
 
     def collidepoint(self, x: float, y: float) -> bool:
         return self._rect.collidepoint(x, y)
 
     def restart(self):
         self.__start_time = pygame.time.get_ticks()
-        self.__time_passed = pygame.time.get_ticks()
+        self.__time_passed = 0
 
     @property
     def paused(self): return self.__paused
@@ -75,19 +79,30 @@ class Timer(Button):
             if self.__pause_size < self.__pause_min_size:
                 self.__pause_size = self.__pause_min_size
     '''
+    def display(self, text: str, time = 1000):
+        self.__display_text = text
+        self.__display_end_time = pygame.time.get_ticks() + time
+
     def draw(self, screen: pygame.Surface):
+        time = pygame.time.get_ticks() 
+        pygame.draw.rect(screen, COLOR_TIMER_DEFAULT, self._rect)
         if self.__paused:
             return
-        pygame.draw.rect(screen, (154, 208, 236), self._rect)
-        pygame.draw.rect(screen, (239, 218, 215), self._rect, width=2)
-        time = (self.__time_passed + pygame.time.get_ticks() - self.__start_time) // 1000
-        m, s = time // 60, time % 60
-        if m < 100:
-            text, text_rect = self._f_text.render(f"{m:02d}:{s:02d}", self._text_color)
-        else: 
-            text = Timer.__f_dig.render(f"X_X", False, self._text_color)
+        if self.__display_text:
+            text, text_rect = self._f_text.render(self.__display_text, self._text_color)
+            if time > self.__display_end_time:
+                self.__display_text = ""
+        else:
+            time = (self.__time_passed + time - self.__start_time) // 1000
+            m, s = time // 60, time % 60
+            if m < 100:
+                text, text_rect = self._f_text.render(f"{m:02d}:{s:02d}", self._text_color)
+            else: 
+                text, text_rect = self._f_text.render(f"X_X", self._text_color)
         text_rect = text.get_rect(center = self._rect.center)
         screen.blit(text, text_rect)
+        screen.blit(self._sf_mask, self._rect)
+
 
         
 

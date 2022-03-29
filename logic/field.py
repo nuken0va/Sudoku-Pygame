@@ -1,5 +1,6 @@
 from itertools import chain, product
 from typing import Callable, ClassVar, Generic, Iterator, TypeVar
+from game.cell import GameCell
 
 from logic.cell import Cell
 
@@ -10,7 +11,7 @@ class Field(Generic[TCell]):
     CellGenerator: ClassVar = Callable[..., Iterator[TCell]]
     __candidates: bool
     
-    def __init__(self, input = None, candidates=False):
+    def __init__(self, input = None, candidates=False, marks=False):
         self.grid = []
         self.__candidates = candidates
         if type(input) == list:
@@ -33,9 +34,11 @@ class Field(Generic[TCell]):
                 self.grid.append(Cell(index, element, cand))
 
         elif isinstance(input, Field):
-            for el in input.grid:
-                self.grid.append(el.copy())
-            if candidates and candidates != input.__candidates:
+            self.grid = [el.copy() for el in input.grid]    
+            if candidates and marks and isinstance(input.grid[0], GameCell):
+                for cell, game_cell in zip(self.grid, input.grid):
+                    cell.candidates = set(game_cell.marks)
+            elif candidates and candidates != input.__candidates:
                 for el in self.grid:
                     el.candidates = {i for i in range(1, 10)}
 

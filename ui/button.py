@@ -1,5 +1,4 @@
 from typing import ClassVar
-
 import pygame
 import pygame.freetype
 
@@ -22,7 +21,7 @@ class Button(GUIobject):
                  icon_filename: str = "",
                  font_filename: str = "",
                  text: str = None,
-                 text_color = (0,0,0),
+                 text_color = COLOR_TEXT,
                  id = None
                  ):
         if text and font_filename: 
@@ -33,14 +32,14 @@ class Button(GUIobject):
         elif icon_filename:
             self._type = "icon"
             self._sf_icon = pygame.image.load("res\\ico\\" + icon_filename).convert_alpha() 
-        self.__rect = pygame.rect.Rect(pos,(64,64))
+        self._rect = pygame.rect.Rect(pos,(64,64))
         super().__init__(id)
 
     def init():
         pass
 
     def collidepoint(self, x: float, y: float) -> bool:
-        return self.__rect.collidepoint(x, y)
+        return self._rect.collidepoint(x, y)
 
     def on_enter(self):
         event_data = {'ui_element': self}
@@ -74,16 +73,16 @@ class Button(GUIobject):
 
     def draw(self, screen: pygame.Surface):
         if self._pressed:
-            pygame.draw.rect(screen, 'azure3', self.__rect)
+            pygame.draw.rect(screen, COLOR_BUTTON_PRESSED, self._rect)
         elif self._hover:
-            pygame.draw.rect(screen, 'azure', self.__rect)
+            pygame.draw.rect(screen, COLOR_BUTTON_HOVER, self._rect)
         else: 
-            pygame.draw.rect(screen, (154, 208, 236), self.__rect)
+            pygame.draw.rect(screen, COLOR_BUTTON_DEFAULT, self._rect)
         if self._type == "icon":
-            screen.blit(self._sf_icon, self.__rect)
+            screen.blit(self._sf_icon, self._rect)
         elif self._type == "text":
-            text, text_rect = self._f_text.render(self._text, self._text_color)
-            text_rect = text.get_rect(center = self.__rect.center)
+            text, text_rect = self._f_text.render(self._text, self._text_color,style=pygame.freetype.STYLE_STRONG)
+            text_rect = text.get_rect(center = self._rect.center)
             screen.blit(text, text_rect)
             
         

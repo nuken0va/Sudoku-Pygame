@@ -17,16 +17,16 @@ class Solver():
         """
         return all(cell.value or len(cell.candidates) for cell in self.__field.grid)
 
-    def __init__(self, input = None):
+    def __init__(self, input = None, save_marks = False):
         if input:
-            self.__field = Field(input, candidates=True)
+            self.__field = Field(input, candidates=True, marks=save_marks)
         self.steps = []
 
     @property
     def field(self): return self.__field
 
     @field.setter
-    def field(self, new_field): self.__field = Field(input, candidates=True)
+    def field(self, new_field): self.__field = Field(new_field, candidates=True)
 
     def update_grid(self, cell: Cell) -> None:
         """
@@ -164,7 +164,7 @@ class Solver():
                 updated = True
                 cell.candidates.difference_update(candidates)
             if updated:
-                self.steps.append(Step(f"Naked Group({group_size})", {"ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
+                self.steps.append(Step(f"Naked Group", {"group_size": group_size, "ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
                 return True
         return False
 
@@ -267,7 +267,12 @@ class Solver():
                 updated = True
                 cell.candidates.intersection_update(candidates)
             if updated:
-                self.steps.append(Step(f"Hidden Group({group_size})", {"ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
+                full_cand = set(i for i in range(9))
+                self.steps.append(Step(f"Hidden Group",
+                                  {"group_size": group_size,
+                                   "ids": [cell.index for cell in block(i) if cell not in group], 
+                                   "values": full_cand - candidates
+                                   }))
                 return True
         return False
 
@@ -299,19 +304,20 @@ class Solver():
 
     def brute_force(self, first=True):
         solution_count = 0
-        current_cell = 0
+        current_cell_index = 0
         free_cells = [cell for cell in self.__field if not cell.value]
         while True:
             # Find solution
-            while 0 <= current_cell < len(free_cells):
-                if free_cells[current_cell].next_candidate():
-                    if self.__field.check_cell(free_cells[current_cell]):
-                        current_cell += 1
+            while 0 <= current_cell_index < len(free_cells):
+                if free_cells[current_cell_index].next_candidate():
+                    if self.__field.check_cell(free_cells[current_cell_index]):
+                        current_cell_index += 1
                 else:
-                    free_cells[current_cell].reset_candidate()
-                    current_cell -= 1 
+                    free_cells[current_cell_index].reset_candidate()
+                    current_cell_index -= 1 
             # If found
-            if current_cell == len(free_cells):
+            #print(f"{solution_count = }, {current_cell_index = }")
+            if current_cell_index == len(free_cells):
                 solution_count += 1
                 if first: 
                     self.steps.append(Step("Brute Force", {}))
@@ -319,7 +325,7 @@ class Solver():
                 elif solution_count == 2:
                     return False
                 else:
-                    current_cell -= 1
+                    current_cell_index -= 1
             else: 
                 return solution_count == 1
 
@@ -357,6 +363,24 @@ class Solver():
         else:
             return 1, difficulty
 
+    def hint(self):
+        self.init_candidates()
+        if (self.naked_singles()
+            or self.hidden_singles()
+            # or self.all_omissions()
+            or self.group_elimination(2)
+            or self.group_elimination(3)
+            # or self.hidden_group_elimination(2)
+            or self.group_elimination(4)
+            # or self.hidden_group_elimination(3)
+            # or self.hidden_group_elimination(4)
+           ):
+            pass
+        else:
+            return None
+        return self.steps.pop()
+    
+
     def fast_solve(self, first = True) -> tuple[int, int]: 
         """
         Retruns (single_solution, difficulty)
@@ -371,7 +395,7 @@ class Solver():
             elif self.hidden_singles():
                 difficulty = max(1, difficulty)
             else:
-                print("bf")
+                # print("bf:")
                 single_solution = self.brute_force(first)
                 if single_solution:
                     return 1, 5

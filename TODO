@@ -2,12 +2,6 @@ Sudoku Game:
 Генерация пазлов
     Установить количество пропусков
 
-Solver:
-    Solve -> Advice
-
 Сохранить/загрузить
 
 FontManager
-
-Декоратор для Solver а
--> Hint
