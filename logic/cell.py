@@ -1,14 +1,19 @@
 from typing import Union
 
+
 class Cell:
     index: int
-    candidates: Union[set[int], None] 
+    candidates: Union[set[int], None]
     __value: int
     __fixed: bool
     __fixed_candidates: list[int]
     __current_candidate: list[int]
 
-    def __init__(self, index: int, value: int, candidates: Union[set, None] = None):
+    def __init__(self,
+                 index: int,
+                 value: int,
+                 candidates: Union[set, None] = None
+                 ):
         self.index = index
         self.candidates = candidates
         self.__value = value
@@ -20,8 +25,8 @@ class Cell:
         return self.__value
 
     @value.setter
-    def value(self, value): 
-        self.__value = value 
+    def value(self, value):
+        self.__value = value
 
     @property
     def fixed(self): return self.__fixed
@@ -38,9 +43,9 @@ class Cell:
             self.__value = self.__fixed_candidates[self.__current_candidate]
             self.__current_candidate += 1
             return 1
-        else: 
+        else:
             return 0
-    
+
     def reset_candidate(self):
         self.__value = None
         self.__current_candidate = 0
@@ -57,7 +62,7 @@ class Cell:
         return index // 9, index % 9
 
     def copy(self):
-        if self.candidates is None:
-            return Cell(self.index, self.value, None)
-        else:
-            return Cell(self.index, self.value, self.candidates.copy())
+        candidates = None
+        if self.candidates:
+            candidates = self.candidates.copy()
+        return Cell(self.index, self.value, candidates)

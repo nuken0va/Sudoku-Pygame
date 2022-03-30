@@ -6,23 +6,23 @@ from logic.cell import Cell
 
 TCell = TypeVar("TCell", bound=Cell)
 
+
 class Field(Generic[TCell]):
     grid: list[TCell]
     CellGenerator: ClassVar = Callable[..., Iterator[TCell]]
     __candidates: bool
-    
-    def __init__(self, input = None, candidates=False, marks=False):
+
+    def __init__(self, input=None, candidates=False, marks=False):
         self.grid = []
         self.__candidates = candidates
         if type(input) == list:
             for index, element in enumerate(input):
                 if isinstance(element, Cell):
                     self.grid.append(element)
-                    if (candidates 
-                       and element.value is None
-                       and element.candidates is None
-                       ):
-                       element.candidates = set()
+                    if (candidates
+                            and element.value is None
+                            and element.candidates is None):
+                        element.candidates = set()
                     continue
                 cand = None
                 if element is None and candidates:
@@ -34,7 +34,7 @@ class Field(Generic[TCell]):
                 self.grid.append(Cell(index, element, cand))
 
         elif isinstance(input, Field):
-            self.grid = [el.copy() for el in input.grid]    
+            self.grid = [el.copy() for el in input.grid]
             if candidates and marks and isinstance(input.grid[0], GameCell):
                 for cell, game_cell in zip(self.grid, input.grid):
                     cell.candidates = set(game_cell.marks)
@@ -86,7 +86,7 @@ class Field(Generic[TCell]):
         for i, j in product(
                 chain(range(x), range(x + 1, 3)),
                 chain(range(y), range(y + 1, 3))
-                ):
+        ):
             yield self[Cell.to_id(x_base + i, y_base + j)]
 
     def check_cell(self, cell: TCell):
@@ -108,14 +108,14 @@ class Field(Generic[TCell]):
                     result += " "
                     for i in range(substr * 3 + 1, substr * 3 + 4):
                         if (self[Cell.to_id(column, row)].candidates
-                            and i in self[Cell.to_id(column, row)].candidates):
+                                and i in self[Cell.to_id(column, row)].candidates):
                             result += str(i)
                         else:
                             result += " "
                     result += " "
             result += "\n"
         return result
-    
+
     def __getitem__(self, key): return self.grid[key]
 
     def __setitem__(self, key, value: TCell): self.grid[key] = value

@@ -1,4 +1,4 @@
-from itertools import  product
+from itertools import product
 from typing import Optional
 
 from logic.cell import Cell
@@ -17,7 +17,7 @@ class Solver():
         """
         return all(cell.value or len(cell.candidates) for cell in self.__field.grid)
 
-    def __init__(self, input = None, save_marks = False):
+    def __init__(self, input=None, save_marks=False):
         if input:
             self.__field = Field(input, candidates=True, marks=save_marks)
         self.steps = []
@@ -26,7 +26,8 @@ class Solver():
     def field(self): return self.__field
 
     @field.setter
-    def field(self, new_field): self.__field = Field(new_field, candidates=True)
+    def field(self, new_field): self.__field = Field(
+        new_field, candidates=True)
 
     def update_grid(self, cell: Cell) -> None:
         """
@@ -62,7 +63,8 @@ class Solver():
                 continue
             if len(cell.candidates) == 1:
                 value = cell.candidates.pop()
-                self.steps.append(Step("Naked Single", {"id": cell.index, "value": value}))
+                self.steps.append(
+                    Step("Naked Single", {"id": cell.index, "value": value}))
                 self.__set_value(cell, value)
                 return True
         return False
@@ -82,14 +84,15 @@ class Solver():
                          if not cell.value and digit in cell.candidates]
                 if len(group) == 1:
                     cell = group[0]
-                    self.steps.append(Step("Hidden Single", {"id": cell.index, "value": digit}))
+                    self.steps.append(
+                        Step("Hidden Single", {"id": cell.index, "value": digit}))
                     self.__set_value(cell, digit)
                     return True
         return False
 
     def __build_group(self, group_size: int,
                       block: Field.CellGenerator, block_index: int,
-                      group: Optional[list[Cell]] = None, 
+                      group: Optional[list[Cell]] = None,
                       candidates: Optional[set[int]] = None,
                       start=0,
                       depth=0
@@ -164,7 +167,8 @@ class Solver():
                 updated = True
                 cell.candidates.difference_update(candidates)
             if updated:
-                self.steps.append(Step(f"Naked Group", {"group_size": group_size, "ids": [cell.index for cell in block(i) if cell not in group], "values": candidates}))
+                self.steps.append(Step(f"Naked Group", {"group_size": group_size, "ids": [
+                                  cell.index for cell in block(i) if cell not in group], "values": candidates}))
                 return True
         return False
 
@@ -201,13 +205,15 @@ class Solver():
             result = False
             column = set(self.__field.range_column(x + offset))
             row = set(self.__field.range_row(y + offset))
-            grid = set(self.__field.range_minigrid(Field.get_minigrid_id(x, y)))
+            grid = set(self.__field.range_minigrid(
+                Field.get_minigrid_id(x, y)))
             result |= self.__omission(column, grid)
             result |= self.__omission(row, grid)
             result |= self.__omission(grid, column)
             result |= self.__omission(grid, row)
             if result:
-                self.steps.append(Step("Omission", {"grid": Field.get_minigrid_id(x, y), "column": x + offset, "row":  y + offset}))
+                self.steps.append(Step("Omission", {"grid": Field.get_minigrid_id(
+                    x, y), "column": x + offset, "row":  y + offset}))
                 return True
         return False
 
@@ -270,33 +276,31 @@ class Solver():
                 full_cand = set(i for i in range(9))
                 self.steps.append(Step(f"Hidden Group",
                                   {"group_size": group_size,
-                                   "ids": [cell.index for cell in block(i) if cell not in group], 
+                                   "ids": [cell.index for cell in block(i) if cell not in group],
                                    "values": full_cand - candidates
                                    }))
                 return True
         return False
 
     def old_brute_force(self, first=True):
-        bf = min((cell for cell in self.__field.grid if not cell.value), key=lambda cell: len(cell.candidates))
+        bf = min((cell for cell in self.__field.grid if not cell.value),
+                 key=lambda cell: len(cell.candidates))
         total_colutions = 0
-        #self.print_sudoku(True)
         for candidate in bf.candidates:
-            #print(f"Brute Force cell {bf.index}: try {candidate}")
             self.__field[bf.index] = Cell(bf.index, candidate, set())
             solver = Solver(self.__field)
             solution_count, difficulty = solver.solve(first)
-            #print(f"Brute Force {solution_count = }")
             if solution_count:
                 if first:
                     self.__field = solver.__field
-                    self.steps.append(Step("Brute Force", {"size":len(bf.candidates), "id": bf.index, "value": candidate}))
+                    self.steps.append(Step("Brute Force", {"size": len(
+                        bf.candidates), "id": bf.index, "value": candidate}))
                     self.steps += solver.steps
                     return solution_count, difficulty
                 else:
                     total_colutions += solution_count
             if total_colutions > 1:
                 return 2, -1
-            #print(f"Brute Force rolledback")
         if first:
             return 0, -1
         else:
@@ -314,30 +318,27 @@ class Solver():
                         current_cell_index += 1
                 else:
                     free_cells[current_cell_index].reset_candidate()
-                    current_cell_index -= 1 
+                    current_cell_index -= 1
             # If found
-            #print(f"{solution_count = }, {current_cell_index = }")
             if current_cell_index == len(free_cells):
                 solution_count += 1
-                if first: 
+                if first:
                     self.steps.append(Step("Brute Force", {}))
                     return True
                 elif solution_count == 2:
                     return False
                 else:
                     current_cell_index -= 1
-            else: 
+            else:
                 return solution_count == 1
 
-    def solve(self, first = True) -> tuple[int, int]:
+    def solve(self, first=True) -> tuple[int, int]:
         """
         Retruns (single_solution, difficulty)
         """
         difficulty = 0
         self.init_candidates()
         while Field.get_free(self.__field.grid) and self.check_candidates():
-            #self.print_sudoku()
-            #print(self.steps)
             if self.naked_singles():
                 continue
             elif self.hidden_singles():
@@ -366,36 +367,32 @@ class Solver():
     def hint(self):
         self.init_candidates()
         if (self.naked_singles()
-            or self.hidden_singles()
-            # or self.all_omissions()
-            or self.group_elimination(2)
-            or self.group_elimination(3)
-            # or self.hidden_group_elimination(2)
-            or self.group_elimination(4)
-            # or self.hidden_group_elimination(3)
-            # or self.hidden_group_elimination(4)
-           ):
+                    or self.hidden_singles()
+                    # or self.all_omissions()
+                    or self.group_elimination(2)
+                    or self.group_elimination(3)
+                    # or self.hidden_group_elimination(2)
+                or self.group_elimination(4)
+                # or self.hidden_group_elimination(3)
+                # or self.hidden_group_elimination(4)
+                ):
             pass
         else:
             return None
         return self.steps.pop()
-    
 
-    def fast_solve(self, first = True) -> tuple[int, int]: 
+    def fast_solve(self, first=True) -> tuple[int, int]:
         """
         Retruns (single_solution, difficulty)
         """
         difficulty = 0
         self.init_candidates()
         while Field.get_free(self.__field.grid) and self.check_candidates():
-            #self.print_sudoku()
-            #print(self.steps)
             if self.naked_singles():
                 continue
             elif self.hidden_singles():
                 difficulty = max(1, difficulty)
             else:
-                # print("bf:")
                 single_solution = self.brute_force(first)
                 if single_solution:
                     return 1, 5

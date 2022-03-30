@@ -1,48 +1,55 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Tuple
 
-import pygame
+import pygame as pg
 from logic.cell import Cell
 from logic.field import Field
-from logic.step import Step
 
 from game.cell import GameCell
 from logic.solver import Solver
-from ui.constants import *
+from ui.constants import COLOR_FIELD_BACKGROUND
 
 
 @dataclass
 class Transaction():
-    mark: int = None 
-    main_cell: GameCell = None 
-    secondary_cells: list[GameCell] = None  #cells which lost their marks
-    value: int = None 
-    previous_value: int = None 
-    previous_marks: int = None 
+    mark: int = None
+    main_cell: GameCell = None
+    # Cells which lost their marks:
+    secondary_cells: list[GameCell] = None
+    value: int = None
+    previous_value: int = None
+    previous_marks: int = None
 
 
 class GameField:
-
-    auto_update_neigbours: bool = True
-    auto_cerrection: bool = False
-
-    __sf_field: ClassVar[pygame.Surface]
-    __rect: pygame.Rect
+    # Visual
+    __sf_field: pg.Surface
+    __rect: pg.Rect
+    # Logic
     __field: Field[GameCell]
     __solution: Field[Cell]
-
+    selected: GameCell = None
+    # Steps
+    _undo_list: list[Transaction]
+    _redo_list: list[Transaction]
+    # Modes
+    auto_update_neigbours: bool = True
+    auto_cerrection: bool = False
     highlight: bool = False
     highlight_marks: bool = False
     highlight_value: int = 0
 
-    _undo_list: list[Transaction]
-    _redo_list: list[Transaction]
-
-    selected: GameCell = None
-
-    def __init__(self, sudoku: list, solution: list):
-        self.__rect = GameField.__sf_field.get_rect(topleft=(3,147))
+    def __init__(self,
+                 sudoku: list,
+                 solution: list,
+                 pos: Tuple[int, int] = (3, 147),
+                 mask: pg.Surface = None,
+                 cell_mark_font: pg.freetype.Font = None,
+                 cell_value_font: pg.freetype.Font = None
+                 ):
+        self.__sf_field = mask
+        self.__rect = self.__sf_field.get_rect(topleft=pos)
         self._undo_list = []
         self._redo_list = []
         cells = [None for j in range(81)]
@@ -50,17 +57,19 @@ class GameField:
             x, y = index % 9, index // 9
             cells[index] = GameCell(
                 (
-                6 + x * 64 + x * 2 + (x // 3),  
-                150 + y * 64 + y * 2 + (y // 3)),
+                    # Cell size is 64x64
+                    # 2 pixels between cells within a minigrid
+                    # 3 pixels between minigrids
+                    pos[0] + 3 + x * 66 + (x // 3),
+                    pos[1] + 3 + y * 66 + (y // 3),
+                ),
                 index,
-                value=value
-                )
+                value=value,
+                value_font=cell_value_font,
+                mark_font=cell_mark_font
+            )
         self.__field = Field(cells)
         self.__solution = Field(solution)
-
-    def init():
-        GameField.__sf_field = pygame.image.load("res\\field_grid.png").convert_alpha()
-        GameCell.init()
 
     def collidepoint(self, x: float, y: float) -> bool:
         return self.__rect.collidepoint(x, y)
@@ -75,7 +84,7 @@ class GameField:
             if cell.collidepoint(x, y):
                 self.select_cell(cell.index)
                 return
-        
+
     def highlight_colide_cell(self, x: float, y: float) -> bool:
         if not self.highlight:
             return
@@ -85,40 +94,53 @@ class GameField:
                     self.highlight_value = cell.value
                     self.highlight_marks = False
                     break
-                self.highlight_value = cell.mark_collidepoint(x,y)
+                self.highlight_value = cell.mark_collidepoint(x, y)
                 if self.highlight_value:
                     self.highlight_marks = True
         self.update_highlights()
-                      
+
     def select_cell(self, index: int):
         self.deselect()
         self.selected = self.__field[index]
         self.__field[index].selected = True
         for other in self.__field.range_neighbours(self.selected):
             other.neigbour = True
-    
-    def check_solution(self) -> bool:
-        for cell in self.__field.grid: cell.reset_highlight()
-    
+
+    def check(self) -> bool:
+        for cell in self.__field.grid:
+            cell.reset_mistake_highlight()
+
         if self.auto_cerrection:
-            self.autocorrect_solution()
+            self.check_mistakes()
         correct = self.check_conflicts()
         correct &= not bool(self.__field.get_free())
 
         return correct
 
-    def autocorrect_solution(self) -> bool:
+    def check_mistakes(self, highlight=True) -> bool:
+        """
+        Checks for differences in current field and solution
+        Empty cells do not count
+        Returns:
+            bool: False if at least one non-empty cell is wrong
+        """
         correct = True
         for i in range(81):
             if self.__field[i].value is None:
-                #correct = False
                 continue
             if self.__field[i].value != self.__solution[i].value:
-                self.__field[i].incorrect = True
                 correct = False
+                if highlight:
+                    self.__field[i].incorrect = True
         return correct
 
-    def check_conflicts(self) -> bool:
+    def check_conflicts(self, highlight=True) -> bool:
+        """
+        Checks for conflicts of cells in rows, columns and minigrids
+        Empty cells do not count
+        Returns:
+            bool: False if at least two cells in one house have same value
+        """
         correct = True
 
         def check_iter(cells: Iterable[GameCell]) -> bool:
@@ -126,25 +148,29 @@ class GameField:
             digs: dict[int, GameCell] = {}
             for cell in cells:
                 value = cell.get_value()
-                if value:
-                    if value in digs:
-                        digs[value].conflict = True
-                        cell.conflict = True
-                        correct = False
-                    else:
-                        digs[value] = cell
-                else: 
+                if value is None:
+                    continue
+                if value in digs:
                     correct = False
+                    if highlight:
+                        cell.conflict = True
+                        digs[value].conflict = True
+                else:
+                    digs[value] = cell
             return correct
 
         for i in range(9):
             correct &= check_iter(self.__field.range_column(i))
             correct &= check_iter(self.__field.range_row(i))
             correct &= check_iter(self.__field.range_minigrid(i))
-            
         return correct
 
     def check_marks(self):
+        """
+        Checks if every empty cell have solution value in its marks
+        Returns:
+            bool: True if no marks missing
+        """
         correct = True
         for i in range(81):
             if self.__field[i].value:
@@ -153,32 +179,39 @@ class GameField:
                 correct = False
         return correct
 
-    def set_cell(self, value: int, index: int = None, check: bool = True) -> bool:
+    def set_cell(self,
+                 value: int,
+                 index: int = None,
+                 check: bool = True) -> bool:
+        """
+        Sets selected cell or cell with id=index (if index is provided) value
+        Returns:
+            bool: True if this move completes the puzzle
+        """
         correct = False
-        if index is not None: 
+        if index is not None:
             cell = self.__field[index]
         else:
             cell = self.selected
-        if (not cell 
-        or cell.fixed
-        or cell.value and cell.value == value
-        or value is None and not cell.value and not cell.marks
-        ):
+        if (not cell
+                or cell.fixed
+                or cell.value and cell.value == value
+                or value is None and not cell.value and not cell.marks):
             return correct
-            
+
         self._redo_list.clear()
 
         transaction = Transaction(main_cell=cell,
                                   previous_value=cell.value,
                                   value=value,
-                                  secondary_cells = []
-                                 )
+                                  secondary_cells=[]
+                                  )
         if cell.marks:
             transaction.previous_marks = cell.marks.copy()
-        
+
         cell.set_value(value)
 
-        # Update neigbour cells 
+        # Update neigbour cells
         if self.auto_update_neigbours:
             for other in self.__field.range_neighbours(cell):
                 if value in other.marks:
@@ -186,45 +219,47 @@ class GameField:
                     transaction.secondary_cells.append(other)
 
         # Check grid
-        if check: 
-            correct = self.check_solution()
+        if check:
+            correct = self.check()
         # Save transaction
         self._undo_list.append(transaction)
         return correct
 
-    def flip_mark(self, value: int, index: int = None) -> bool:
-        result = False
-        if index is not None: 
+    def flip_mark(self, value: int, index: int = None):
+        """
+        Flips selected cell or cell with id=index (if index is provided) mark
+        """
+        if index is not None:
             cell = self.__field[index]
         else:
             cell = self.selected
         if not cell or cell.value:
-            return result
-        
+            return
+
         self._redo_list.clear()
         transaction = Transaction(main_cell=cell)
 
         if value:
             transaction.mark = value
-        else: 
+        else:
             transaction.previous_marks = cell.marks.copy()
         cell.flip_mark(value)
 
         self._undo_list.append(transaction)
-        return result
 
-    def _del_mark(self, value: int, index: int = None) -> bool:
-        result = False
-        if index is not None: 
+    def _del_mark(self, value: int, index: int = None):
+        """
+        Deletes mark
+        """
+        if index is not None:
             cell = self.__field[index]
         else:
             cell = self.selected
-        if (not cell 
-            or cell.value
-            or value not in cell.marks):
-            return result
+        if (not cell
+                or cell.value
+                or value not in cell.marks):
+            return
         return self.flip_mark(value=value, index=index)
-
 
     def undo(self):
         if not self._undo_list:
@@ -240,17 +275,17 @@ class GameField:
                 other.marks.append(transaction.value)
         if transaction.previous_marks is not None:
             cell.marks = transaction.previous_marks.copy()
-        
+
         self._redo_list.append(transaction)
-        if not transaction.mark: 
-            self.check_solution()
+        if not transaction.mark:
+            self.check()
 
     def redo(self):
         if not self._redo_list:
             return
         transaction = self._redo_list.pop()
         cell = transaction.main_cell
-        
+
         if transaction.mark:
             cell.flip_mark(transaction.mark)
         else:
@@ -259,7 +294,7 @@ class GameField:
                 other.marks.remove(transaction.value)
 
         self._undo_list.append(transaction)
-        self.check_solution()
+        self.check()
 
     def __clear_highlights(self):
         for cell in self.__field:
@@ -276,7 +311,6 @@ class GameField:
 
     def __marks_highlights(self):
         for cell in self.__field:
-            #cell.marks_higlight = True
             cell.marks_higlight_value = self.highlight_value
 
     def update_highlights(self):
@@ -286,7 +320,7 @@ class GameField:
         # Marks Highlight
         if self.highlight_value and self.highlight_marks:
             self.__marks_highlights()
-            
+
         # Cells Highlight
         elif self.highlight_value and self.highlight:
             self.__cells_highlights()
@@ -299,23 +333,27 @@ class GameField:
             if cell.value:
                 continue
             elif cell.marks and not reset:
-                cell.marks = [mark for mark in cell.marks 
+                cell.marks = [mark for mark in cell.marks
                               if mark in solver.field[index].candidates]
             else:
                 cell.marks = list(solver.field[index].candidates)
 
     def hint(self):
-        if not self.autocorrect_solution():
+        # Check if all values are correct
+        if not self.check_mistakes():
             print("There is at least one mistake")
             return True
+        # Check if all marks are correct
         if not self.check_marks():
             print("Marks initialized")
             self.auto_crme()
             return True
+        # Find the next step
         solver = Solver(self.__field, save_marks=True)
         step = solver.hint()
         print(step)
         if step is None:
+            # No possible steps found
             print("No hints, Sorry")
             return False
         if step.method in ["Naked Single", "Hidden Single"]:
@@ -324,18 +362,16 @@ class GameField:
         elif step.method in ["Naked Group"]:
             for id in step.description["ids"]:
                 for mark in step.description["values"]:
-                    self._del_mark(value=mark, 
+                    self._del_mark(value=mark,
                                    index=id)
         else:
+            # Unsupported method
             print(f"Can't execute {step.method}")
             return False
         return True
 
-
-
-
-    def draw(self, screen: pygame.Surface):
-        pygame.draw.rect(screen, COLOR_FIELD_BACKGROUND, self.__rect)
-        screen.blit(GameField.__sf_field, self.__rect)
+    def draw(self, screen: pg.Surface):
+        pg.draw.rect(screen, COLOR_FIELD_BACKGROUND, self.__rect)
+        screen.blit(self.__sf_field, self.__rect)
         for cell in self.__field:
             cell.draw(screen)

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import pygame
 
 
-class GUIobject(ABC):    
+class GUIobject(ABC):
     __id: str = None
 
     def __init__(self, id):
@@ -25,16 +25,13 @@ class GUIobject(ABC):
         pass
 
     @abstractmethod
+    def on_leave(self) -> None:
+        pass
+
+    @abstractmethod
+    def on_click(self) -> None:
+        pass
+
+    @abstractmethod
     def on_release(self) -> None:
         pass
-
-    @abstractmethod
-    def on_click(self) -> None: 
-        pass
-
-    @abstractmethod
-    def on_release(self) -> None: 
-        pass
-
-
-

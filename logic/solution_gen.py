@@ -24,7 +24,7 @@ class SudokuGenerator():
     def reset(self):
         self.field = Field([None for j in range(81)])
         grid_step = [0 for _ in range(81)]
-        grid_gen = [[x for x in range(1, 10)] for i in range(81)]        
+        grid_gen = [[x for x in range(1, 10)] for i in range(81)]
         self.solver = Solver()
 
         for cell in range(9):
@@ -40,19 +40,19 @@ class SudokuGenerator():
             if grid_step[cell] < 8:
                 grid_step[cell] += 1
                 backtrack = False
-            else: 
-                grid_step[cell]  = 0
+            else:
+                grid_step[cell] = 0
                 self.field[cell].value = None
                 cell -= 1
                 backtrack = True
-    
+
     def test_correct(self, cell_id: int) -> bool:
         for cell in self.field.range_neighbours(self.field[cell_id]):
             if self.field[cell_id].value == cell.value:
                 return False
         return True
-    
-    def clear_cells(self, field, count, check = True):
+
+    def clear_cells(self, field, count, check=True):
         while count:
             cell = random.choice(field.grid)
             if cell.value is None:
@@ -82,4 +82,3 @@ class SudokuGenerator():
                 break
         self.clear_cells(field_copy, count-20)
         return field_copy.get_list(), self.field.get_list()
-
