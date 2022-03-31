@@ -3,9 +3,8 @@ This is a simple sudoku program written in Python using Pygame. I made this proj
 
 Here is some screenshots:
 
-![Screenshot-1](https://github.com/nuken0va/Sudoku-Pygame/blob/main/Screen-1.png)
-
-![Screenshot-2](https://github.com/nuken0va/Sudoku-Pygame/blob/main/Screen-2.png)
+<img src="https://raw.githubusercontent.com/nuken0va/Sudoku-Pygame/master/Screen-1.png" height="300">
+<img src="https://raw.githubusercontent.com/nuken0va/Sudoku-Pygame/master/Screen-2.png" height="300">
 
 Currently puzzle generating algorithm is rather primitive so the game can freeze for 1-2 seconds when rerolling the puzzle. Maybe I'll fix it in the future by implementing another algorithm.
 
