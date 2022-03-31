@@ -75,6 +75,7 @@ class GameField:
         return self.__rect.collidepoint(x, y)
 
     def deselect(self):
+        self.selected = None
         for cell in self.__field.grid:
             cell.selected = False
             cell.neigbour = False
@@ -359,7 +360,7 @@ class GameField:
         if step.method in ["Naked Single", "Hidden Single"]:
             self.set_cell(value=step.description["value"],
                           index=step.description["id"])
-        elif step.method in ["Naked Group"]:
+        elif step.method in ["Naked Group", "Hidden Group", "Omission"]:
             for id in step.description["ids"]:
                 for mark in step.description["values"]:
                     self._del_mark(value=mark,

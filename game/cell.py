@@ -112,6 +112,7 @@ class GameCell(Cell):
     def set_value(self, value):
         self.marks = []
         self.value = value
+        self.incorrect = False
 
     def flip_mark(self, value):
         if self.value:
@@ -152,4 +153,4 @@ class GameCell(Cell):
 
     def reset_mistake_highlight(self):
         self.conflict = False
-        self.incorrect = False
+        # Do not reset incorrect
