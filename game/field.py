@@ -347,7 +347,7 @@ class GameField:
         # Check if all marks are correct
         if not self.check_marks():
             print("Marks initialized")
-            self.auto_crme()
+            self.auto_crme(reset=True)
             return True
         # Find the next step
         solver = Solver(self.__field, save_marks=True)
