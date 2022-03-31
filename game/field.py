@@ -114,7 +114,7 @@ class GameField:
         if self.auto_cerrection:
             self.check_mistakes()
         correct = self.check_conflicts()
-        correct &= not bool(self.__field.get_free())
+        correct &= not bool(self.__field.free_count())
 
         return correct
 

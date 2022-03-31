@@ -14,22 +14,25 @@ from ui.constants import (COLOR_BUTTON_DEFAULT,
 
 
 class Button(GUIobject):
-    # __sf_bg: ClassVar[pygame.surface.Surface]
+    # Visual
     _f_text: ClassVar[pygame.freetype.Font]
     _sf_icon: pygame.surface.Surface
     _text: str = None
+    _text_size: int
     _text_color = None
+    _type: str
+    # States
     _hover: bool = False
     _pressed: bool = False
-    _type: str
 
     def __init__(self,
                  pos: tuple[float, float],
-                 # size: tuple[float, float] = (64, 64),
+                 size: tuple[float, float] = (64, 64),
                  icon: pygame.surface.Surface = None,
                  font: pygame.freetype.Font = None,
                  text: str = None,
                  text_color=COLOR_TEXT,
+                 text_size=32,
                  id=None
                  ):
         if text and font:
@@ -37,10 +40,11 @@ class Button(GUIobject):
             self._f_text = font
             self._text_color = text_color
             self._text = text
+            self._text_size = text_size
         elif icon:
             self._type = "icon"
             self._sf_icon = icon
-        self._rect = pygame.rect.Rect(pos, (64, 64))
+        self._rect = pygame.rect.Rect(pos, size)
         super().__init__(id)
 
     def init():
@@ -80,16 +84,21 @@ class Button(GUIobject):
     def hover(self): return self._hover
 
     def draw(self, screen: pygame.Surface):
+        # Background
         if self._pressed:
             pygame.draw.rect(screen, COLOR_BUTTON_PRESSED, self._rect)
         elif self._hover:
             pygame.draw.rect(screen, COLOR_BUTTON_HOVER, self._rect)
         else:
             pygame.draw.rect(screen, COLOR_BUTTON_DEFAULT, self._rect)
+        # Icon/Text
         if self._type == "icon":
             screen.blit(self._sf_icon, self._rect)
         elif self._type == "text":
             text, text_rect = self._f_text.render(
-                self._text, self._text_color, style=pygame.freetype.STYLE_STRONG)
+                self._text,
+                self._text_color,
+                style=pygame.freetype.STYLE_STRONG,
+                size=self._text_size)
             text_rect = text.get_rect(center=self._rect.center)
             screen.blit(text, text_rect)

@@ -78,22 +78,30 @@ class Timer(Button):
 
     def draw(self, screen: pygame.Surface):
         time = pygame.time.get_ticks()
+        # Background
         pygame.draw.rect(screen, COLOR_TIMER_DEFAULT, self._rect)
+
         if self.__paused:
             return
+        # Disolay mode:
         if self.__display_text:
-            text, text_rect = self._f_text.render(
-                self.__display_text, self._text_color)
+            text, text_rect = self._f_text.render(self.__display_text,
+                                                  self._text_color,
+                                                  size=64)
             if time > self.__display_end_time:
                 self.__display_text = ""
+        # Clock mode:
         else:
             time = (self.__time_passed + time - self.__start_time) // 1000
             m, s = time // 60, time % 60
             if m < 100:
-                text, text_rect = self._f_text.render(
-                    f"{m:02d}:{s:02d}", self._text_color, size=64)
+                text, text_rect = self._f_text.render(f"{m:02d}:{s:02d}",
+                                                      self._text_color,
+                                                      size=64)
+            # Timer is too big
             else:
-                text, text_rect = self._f_text.render(f"X_X", self._text_color, size=64)
+                text, text_rect = self._f_text.render(
+                    f"X_X", self._text_color, size=64)
         text_rect = text.get_rect(center=self._rect.center)
         screen.blit(text, text_rect)
         screen.blit(self._sf_mask, self._rect)

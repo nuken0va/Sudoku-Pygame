@@ -8,7 +8,7 @@ from res_manager import ResourceManager
 import ui.constants
 from config import load_config
 from game.field import GameField
-from logic.solution_gen import SudokuGenerator
+from logic.generator import SudokuGenerator
 from ui.button import Button
 from ui.key_button import KeyButton
 from ui.logo import Logo
@@ -46,7 +46,8 @@ class Game():
 
         self.rm = ResourceManager()
         self.generator = SudokuGenerator()
-        self.field = GameField(*self.generator.gen(),
+        puzzle, solution, difficulty = self.generator.gen()
+        self.field = GameField(puzzle, solution,
                                mask=self.rm["ui"]["field_grid"],
                                cell_mark_font=self.rm["fonts"]["broken"],
                                cell_value_font=self.rm["fonts"]["monainn"])
@@ -129,17 +130,23 @@ class Game():
                       key=K_BACKSPACE,
                       icon=self.rm["icons"]["eraser"]),
             Logo(pos=(self.window_size[0] - 104, 74),
-                 font=self.rm["fonts"]["shippori"])
+                 font=self.rm["fonts"]["shippori"],
+                 dif_font=self.rm["fonts"]["monainn"],
+                 difficulty=difficulty,
+                 id="ui_logo")
         )
         self.timer = self.gui_manager["ui_timer"]
         pass
 
     def reset(self):
         self.generator.reset()
-        self.field = GameField(*self.generator.gen(),
+        puzzle, solution, difficulty = self.generator.gen()
+        self.field = GameField(puzzle, solution,
                                mask=self.rm["ui"]["field_grid"],
                                cell_mark_font=self.rm["fonts"]["broken"],
                                cell_value_font=self.rm["fonts"]["monainn"])
+        self.gui_manager["ui_logo"].difficulty = difficulty
+
         self.timer.restart()
         pass
 
@@ -159,7 +166,8 @@ class Game():
     def win_proc(self):
         self.screen.fill(COLOR_BACKGROUND_WIN)
         win_font = self.rm["fonts"]["monainn"]
-        text, text_rect = win_font.render("Congratulations!", COLOR_TEXT, size=100)
+        text, text_rect = win_font.render(
+            "Congratulations!", COLOR_TEXT, size=100)
         text_rect = text.get_rect(center=self.screen.get_rect().center)
         self.screen.blit(text, text_rect)
         for event in pygame.event.get():
@@ -218,7 +226,7 @@ class Game():
                     self.field.auto_crme()
                 elif event.ui_element.id == "ui_button_hint":
                     if not self.field.hint():
-                        self.timer.display(">_<")
+                        self.timer.display("IDK,SRY")
                     else:
                         self.win = self.field.check()
                 elif event.ui_element.id == "ui_button_reset":

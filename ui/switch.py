@@ -8,13 +8,16 @@ from ui.constants import (UI_SWITCH_ON_CLICK,
 
 
 class Switch(Button):
+    # Visual
     _sf_alt_icon: pygame.surface.Surface
     _alt_text: str = None
-    _state: bool = False
     _type: str
+    # States
+    _state: bool = False
 
     def __init__(self,
                  pos: tuple[float, float],
+                 size: tuple[float, float] = (64, 64),
                  icon_false: pygame.surface.Surface = None,
                  icon_true: pygame.surface.Surface = None,
                  font: pygame.freetype.Font = None,
@@ -22,20 +25,25 @@ class Switch(Button):
                  text_true: str = None,
                  text_color=(0, 0, 0),
                  init_state=False,
+                 text_size=32,
                  id=None
                  ):
         if text_false and text_true and font:
             self._alt_text = text_true
             super().__init__(pos=pos,
+                             size=size,
                              font=font,
                              str=text_false,
                              text_color=text_color,
+                             text_size=text_size,
                              id=id
                              )
         elif icon_false and icon_true:
             self._sf_alt_icon = icon_true
             super().__init__(pos=pos,
+                             size=size,
                              icon=icon_false,
+                             text_size=text_size,
                              id=id
                              )
         if init_state:

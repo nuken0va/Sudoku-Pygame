@@ -8,7 +8,7 @@ EXAMPLE_CONFIG = """"[screen]
 """
 
 
-def load_config(path="./config.toml"):
+def load_config(path="./res/config.toml"):
     """Loads the config from `path`"""
     if os.path.exists(path) and os.path.isfile(path):
         config = toml.load(path)

@@ -35,7 +35,7 @@ class KeyButton(Button):
                       'mod': self._mod,
                       'unicode': self._unicode,
                       'scancode': self._scancode}
-        pygame.event.post(pygame.event.Event(
-            pygame.locals.KEYDOWN, event_data))
+        pygame.event.post(pygame.event.Event(pygame.locals.KEYDOWN,
+                                             event_data))
 
         self._pressed = True

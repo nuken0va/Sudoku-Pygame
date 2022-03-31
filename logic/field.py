@@ -52,11 +52,17 @@ class Field(Generic[TCell]):
         """
         return y - (y % 3) + (x // 3)
 
-    def get_free(block):
+    def free_count(block):
         """
         Returns ammount of cells without a value
         """
         return len([cell for cell in block if not cell.value])
+
+    def get_free(self):
+        return [cell for cell in self.grid if not cell.value]
+
+    def get_filled(self):
+        return [cell for cell in self.grid if cell.value]
 
     def range_column(self, index, start=0, end=9) -> Iterator[TCell]:
         for i in range(start, end):

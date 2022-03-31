@@ -10,6 +10,7 @@ class Solver():
     __field: Field
     solution_exists: bool = True
     steps: list[Step]
+    fast_crme: bool = True
 
     def check_candidates(self) -> bool:
         """
@@ -34,11 +35,18 @@ class Solver():
         Deletes cell.value from cell neighbours' candidates
         """
         for other in self.__field.range_neighbours(cell):
+            if other.value:
+                continue
             other.candidates.discard(cell.value)
+            if self.fast_crme and len(other.candidates) == 1:
+                value = other.candidates.pop()
+                self.steps.append(
+                    Step("Naked Single", {"id": other.index, "value": value}))
+                self.__set_value(other, value)
 
     def __set_value(self, cell: Cell, value: int) -> None:
         cell.value = value
-        cell.candidates = set()
+        cell.candidates = None
         self.update_grid(cell)
 
     def init_candidates(self) -> None:
@@ -46,12 +54,15 @@ class Solver():
         CRME method.
         Scans neighbor cells to eliminate candidates
         """
-        for cell in self.__field.grid:
-            if cell.value:
-                continue
-            for other in self.__field.range_neighbours(cell):
-                cell.candidates.discard(other.value)
-        return False
+        for i, block in product(range(9), [self.__field.range_row,
+                                           self.__field.range_column,
+                                           self.__field.range_minigrid]
+                                ):
+            values = set(cell.value for cell in block(i) if cell.value)
+            for cell in block(i):
+                if cell.value:
+                    continue
+                cell.candidates.difference_update(values)
 
     def naked_singles(self) -> None:
         """
@@ -152,7 +163,7 @@ class Solver():
         Scans candidates of all cells in row/column/minigrid
         to find naked indpendend groups
         """
-        updated = False
+        updated = []
         for i, block in product(range(9), [self.__field.range_row,
                                            self.__field.range_column,
                                            self.__field.range_minigrid]
@@ -162,13 +173,14 @@ class Solver():
                 continue
             for cell in block(i):
                 if (cell in group
+                        or cell.value
                         or not cell.candidates.intersection(candidates)):
                     continue
-                updated = True
+                updated.append(cell)
                 cell.candidates.difference_update(candidates)
             if updated:
                 self.steps.append(Step(f"Naked Group", {"group_size": group_size, "ids": [
-                                  cell.index for cell in block(i) if cell not in group], "values": candidates}))
+                                  cell.index for cell in updated], "values": candidates}))
                 return True
         return False
 
@@ -177,22 +189,37 @@ class Solver():
         This method is only called by all_omissions
         searches for omission of secondary using main
         """
-        found = False
+        updated = []
+        # All candidates from intersection (i)
+        # and difference (d) of houses
         i, d = set(), set()
         for cell in main.intersection(secondary):
+            if cell.value:
+                continue
             i.update(cell.candidates)
         for cell in main.difference(secondary):
+            if cell.value:
+                continue
             d.update(cell.candidates)
+        # Unique candidates in houses intersection
+        # (relatively to main house)
         unique = i.difference(d)
         if not unique:
-            return found
+            return False
+        # If unique values exist => delete them from secondary house
         for cell in secondary.difference(main):
+            if cell.value:
+                continue
             dif = cell.candidates.intersection(unique)
             if not dif:
                 continue
-            found = True
+            updated.append(cell)
             cell.candidates.difference_update(unique)
-        return found
+        if updated:
+            self.steps.append(
+                Step("Omission", {"ids": [cell.index for cell in updated], "values": unique}))
+            return True
+        return False
 
     def all_omissions(self):
         """
@@ -207,13 +234,10 @@ class Solver():
             row = set(self.__field.range_row(y + offset))
             grid = set(self.__field.range_minigrid(
                 Field.get_minigrid_id(x, y)))
-            result |= self.__omission(column, grid)
-            result |= self.__omission(row, grid)
-            result |= self.__omission(grid, column)
-            result |= self.__omission(grid, row)
-            if result:
-                self.steps.append(Step("Omission", {"grid": Field.get_minigrid_id(
-                    x, y), "column": x + offset, "row":  y + offset}))
+            if (self.__omission(column, grid)
+                    or self.__omission(row, grid)
+                    or self.__omission(grid, column)
+                    or self.__omission(grid, row)):
                 return True
         return False
 
@@ -225,7 +249,7 @@ class Solver():
                              depth=0
                              ) -> tuple[set[Cell], set[int]]:
         """
-        This method is only called by group_elimination
+        This method is only called by hidden_group_elimination
         recursively builds group within block(block_index)
         with size of group_size
         """
@@ -240,6 +264,8 @@ class Solver():
             if not digit_cells[digit] or len(digit_cells[digit]) > group_size:
                 continue
             new_group = group.union(digit_cells[digit])
+            if len(new_group) > group_size:
+                continue
             suggestion.add(digit + 1)
             result = self.__build_hidden_group(group_size=group_size,
                                                digit_cells=digit_cells,
@@ -258,7 +284,7 @@ class Solver():
                                            self.__field.range_minigrid]
                                 ):
             digits = []
-            updated = False
+            updated = []
             for digit in range(1, 10):
                 digits.append([cell for cell in block(i)
                                if (not cell.value)
@@ -270,13 +296,13 @@ class Solver():
             for cell in group:
                 if not cell.candidates.difference(candidates):
                     continue
-                updated = True
+                updated.append(cell)
                 cell.candidates.intersection_update(candidates)
             if updated:
-                full_cand = set(i for i in range(9))
+                full_cand = set(i for i in range(1, 10))
                 self.steps.append(Step(f"Hidden Group",
                                   {"group_size": group_size,
-                                   "ids": [cell.index for cell in block(i) if cell not in group],
+                                   "ids": [cell.index for cell in updated],
                                    "values": full_cand - candidates
                                    }))
                 return True
@@ -285,26 +311,24 @@ class Solver():
     def old_brute_force(self, first=True):
         bf = min((cell for cell in self.__field.grid if not cell.value),
                  key=lambda cell: len(cell.candidates))
-        total_colutions = 0
+        total_solutions = 0
+        solver = Solver(self.__field)
         for candidate in bf.candidates:
             self.__field[bf.index] = Cell(bf.index, candidate, set())
-            solver = Solver(self.__field)
-            solution_count, difficulty = solver.solve(first)
+            solver.field = self.__field
+            solution_count = solver.fast_solve(first | (total_solutions != 0))
             if solution_count:
                 if first:
                     self.__field = solver.__field
                     self.steps.append(Step("Brute Force", {"size": len(
                         bf.candidates), "id": bf.index, "value": candidate}))
                     self.steps += solver.steps
-                    return solution_count, difficulty
+                    return 1
                 else:
-                    total_colutions += solution_count
-            if total_colutions > 1:
-                return 2, -1
-        if first:
-            return 0, -1
-        else:
-            return total_colutions, difficulty
+                    total_solutions += solution_count
+            if total_solutions > 1:
+                return total_solutions
+        return total_solutions
 
     def brute_force(self, first=True):
         solution_count = 0
@@ -332,13 +356,13 @@ class Solver():
             else:
                 return solution_count == 1
 
-    def solve(self, first=True) -> tuple[int, int]:
+    def solve(self) -> tuple[int, int]:
         """
         Retruns (single_solution, difficulty)
         """
         difficulty = 0
         self.init_candidates()
-        while Field.get_free(self.__field.grid) and self.check_candidates():
+        while Field.free_count(self.__field.grid) and self.check_candidates():
             if self.naked_singles():
                 continue
             elif self.hidden_singles():
@@ -354,12 +378,12 @@ class Solver():
                     or self.hidden_group_elimination(4)):
                 difficulty = max(4, difficulty)
             else:
-                single_solution = self.brute_force(first)
+                single_solution = self.old_brute_force(True)
                 if single_solution:
                     return 1, 5
                 else:
                     return 0, -1
-        if Field.get_free(self.__field.grid):
+        if Field.free_count(self.__field.grid):
             return 0, -1
         else:
             return 1, difficulty
@@ -367,15 +391,15 @@ class Solver():
     def hint(self):
         self.init_candidates()
         if (self.naked_singles()
-                    or self.hidden_singles()
-                    # or self.all_omissions()
-                    or self.group_elimination(2)
-                    or self.group_elimination(3)
-                    # or self.hidden_group_elimination(2)
+                or self.hidden_singles()
+                or self.all_omissions()
+                or self.group_elimination(2)
+                or self.group_elimination(3)
+                or self.hidden_group_elimination(2)
                 or self.group_elimination(4)
-                # or self.hidden_group_elimination(3)
-                # or self.hidden_group_elimination(4)
-                ):
+                or self.hidden_group_elimination(3)
+                or self.hidden_group_elimination(4)
+            ):
             pass
         else:
             return None
@@ -385,20 +409,21 @@ class Solver():
         """
         Retruns (single_solution, difficulty)
         """
-        difficulty = 0
+        solution_count = 1
         self.init_candidates()
-        while Field.get_free(self.__field.grid) and self.check_candidates():
-            if self.naked_singles():
+        while self.naked_singles():
+            pass
+        while Field.free_count(self.__field.grid) and self.check_candidates():
+            if (not self.fast_crme) and self.naked_singles():
                 continue
             elif self.hidden_singles():
-                difficulty = max(1, difficulty)
+                continue
+            elif len([cell for cell in self.__field if not cell.value and len(cell.candidates) != 2]) == 0:
+                return 2
             else:
-                single_solution = self.brute_force(first)
-                if single_solution:
-                    return 1, 5
-                else:
-                    return 0, -1
-        if Field.get_free(self.__field.grid):
-            return 0, -1
+                solution_count = self.old_brute_force(first)
+                return solution_count
+        if Field.free_count(self.__field.grid):
+            return 0
         else:
-            return 1, difficulty
+            return 1

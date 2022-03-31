@@ -7,7 +7,6 @@ from ui.GUI import GUIobject
 
 
 class UImanager():
-
     ui_elements: list[GUIobject] = None
 
     def __init__(self, *args):
