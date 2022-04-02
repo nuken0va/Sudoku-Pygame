@@ -99,6 +99,7 @@ class GameField:
                 if self.highlight_value:
                     self.highlight_marks = True
         self.update_highlights()
+        return self.highlight_value
 
     def select_cell(self, index: int):
         self.deselect()

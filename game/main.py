@@ -12,7 +12,7 @@ from logic.generator import SudokuGenerator
 from ui.button import Button
 from ui.key_button import KeyButton
 from ui.logo import Logo
-from ui.manager import UImanager
+from ui.manager import UiManager
 from ui.switch import Switch
 from ui.timer import Timer
 from ui.constants import *
@@ -26,7 +26,7 @@ class Game():
     highlight_mode: bool = False
     # Game states:
 
-    gui_manager: UImanager
+    gui_manager: UiManager
     timer: Timer
 
     field: GameField
@@ -52,10 +52,13 @@ class Game():
                                cell_mark_font=self.rm["fonts"]["broken"],
                                cell_value_font=self.rm["fonts"]["monainn"])
 
-        self.gui_manager = UImanager(
+        self.gui_manager = UiManager(
+            self.window_size,
+            self.rm, 
             Button(pos=(24, 41),
                    icon=self.rm["icons"]["reset"],
-                   id="ui_button_reset"),
+                   id="ui_button_reset",
+                   hint_text="New Game"),
             Timer(pos=(104, 25),
                   id="ui_timer",
                   mask=self.rm["ui"]["timer_frame"],
@@ -64,32 +67,40 @@ class Game():
                    icon_false=self.rm["icons"]["auto_candidate_false"],
                    icon_true=self.rm["icons"]["auto_candidate_true"],
                    id="ui_switch_auto_candidate",
-                   init_state=self.field.auto_update_neigbours),
+                   init_state=self.field.auto_update_neigbours,
+                   hint_text="Auto candidate mode"),
             Button(pos=(388, 41),
                    icon=self.rm["icons"]["fill"],
-                   id="ui_button_fill_candidate"),
+                   id="ui_button_fill_candidate",
+                   hint_text="Fill candidates"),
             Switch(pos=(454, 41),
                    icon_false=self.rm["icons"]["auto_correction_false"],
                    icon_true=self.rm["icons"]["auto_correction_true"],
                    id="ui_switch_correction",
-                   init_state=self.field.auto_cerrection),
+                   init_state=self.field.auto_cerrection,
+                   hint_text="Show errors"),
             Button(pos=(520, 41),
                    icon=self.rm["icons"]["hint"],
-                   id="ui_button_hint"),
+                   id="ui_button_hint",
+                   hint_text="Hint"),
             Button(pos=(641, 218),
                    icon=self.rm["icons"]["undo"],
-                   id="ui_button_undo"),
+                   id="ui_button_undo",
+                   hint_text="Undo"),
             Button(pos=(707, 218),
                    icon=self.rm["icons"]["redo"],
-                   id="ui_button_redo"),
+                   id="ui_button_redo",
+                   hint_text="Redo"),
             Switch(pos=(641, 284),
                    icon_false=self.rm["icons"]["eye_closed"],
                    icon_true=self.rm["icons"]["eye_opened"],
-                   id="ui_button_highlight"),
+                   id="ui_switch_highlight",
+                   hint_text="On/off highlight mode"),
             Switch(pos=(707, 284),
                    icon_false=self.rm["icons"]["pen2"],
                    icon_true=self.rm["icons"]["pen"],
-                   id="ui_switch_candidate"),
+                   id="ui_switch_candidate",
+                   hint_text="On/off candidate mode"),
             KeyButton(pos=(608, 417),
                       key=K_1,
                       font=self.rm["fonts"]["monainn"],
@@ -178,6 +189,19 @@ class Game():
                 self.reset()
                 self.win = False
 
+    def set_highlight_mode(self, state):
+        self.highlight_mode = state
+        self.field.highlight = state
+        if self.highlight_mode:
+            self.field.deselect()
+            self.field.highlight_marks = self.candidate_mode
+        else:
+            self.field.highlight_marks = False
+            self.field.highlight_value = 0
+        self.field.update_highlights()
+        if self.gui_manager["ui_switch_highlight"].state != state:
+            self.gui_manager["ui_switch_highlight"].swap()
+
     def game_proc(self):
         for event in pygame.event.get():
             self.gui_manager.proccess_event(event)
@@ -189,10 +213,24 @@ class Game():
             elif event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 if self.field.collidepoint(*pos):
-                    if not self.highlight_mode:
+                    # Regular mode
+                    if not self.highlight_mode and event.button == 1:
                         self.field.select_colide_cell(*pos)
+                    # Switch to highlight
+                    elif not self.highlight_mode and event.button == 3:
+                        self.set_highlight_mode(True)
+                        val = self.field.highlight_colide_cell(*pos)
+                        if not val:
+                            self.set_highlight_mode(False)
+                            self.field.select_colide_cell(*pos)
+                    # Highlight mode
                     else:
-                        self.field.highlight_colide_cell(*pos)
+                        val = self.field.highlight_colide_cell(*pos)
+                        # Exit Highlight mode
+                        if not val:
+                            self.set_highlight_mode(False)
+                            self.field.select_colide_cell(*pos)
+                        # Swap to candidate mode
                         if self.field.highlight_marks != self.candidate_mode:
                             self.candidate_mode = not self.candidate_mode
                             self.gui_manager["ui_switch_candidate"].swap()
@@ -212,6 +250,17 @@ class Game():
                         self.field.flip_mark(dig)
                     elif self.field.selected:
                         self.win = self.field.set_cell(dig)
+                elif self.field.selected and event.key in [K_DOWN, K_UP, K_LEFT, K_RIGHT]:
+                    if event.key == K_DOWN:
+                        new_selected = self.field.selected.index + 9
+                    elif event.key == K_UP:
+                        new_selected = self.field.selected.index - 9
+                    if event.key == K_RIGHT:
+                        new_selected = self.field.selected.index + 1
+                    elif event.key == K_LEFT:
+                        new_selected = self.field.selected.index - 1
+                    if 0 <= new_selected < 81:
+                        self.field.select_cell(index=new_selected)                        
                 elif event.key == K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
                     self.field.undo()
                 elif event.key == K_y and pygame.key.get_mods() & pygame.KMOD_CTRL:
@@ -239,16 +288,8 @@ class Game():
                         self.field.highlight_marks = event.state
                         self.field.update_highlights()
 
-                elif event.ui_element.id == "ui_button_highlight":
-                    self.highlight_mode = event.state
-                    self.field.highlight = event.state
-                    if self.highlight_mode:
-                        self.field.deselect()
-                        self.field.highlight_marks = self.candidate_mode
-                    else:
-                        self.field.highlight_marks = False
-                        self.field.highlight_value = 0
-                    self.field.update_highlights()
+                elif event.ui_element.id == "ui_switch_highlight":
+                    self.set_highlight_mode(event.state)
 
                 elif event.ui_element.id == "ui_switch_correction":
                     self.field.auto_cerrection = event.state

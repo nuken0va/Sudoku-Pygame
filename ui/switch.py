@@ -26,6 +26,7 @@ class Switch(Button):
                  text_color=(0, 0, 0),
                  init_state=False,
                  text_size=32,
+                 hint_text: str = "",
                  id=None
                  ):
         if text_false and text_true and font:
@@ -36,6 +37,7 @@ class Switch(Button):
                              str=text_false,
                              text_color=text_color,
                              text_size=text_size,
+                             hint_text=hint_text,
                              id=id
                              )
         elif icon_false and icon_true:
@@ -44,6 +46,7 @@ class Switch(Button):
                              size=size,
                              icon=icon_false,
                              text_size=text_size,
+                             hint_text=hint_text,
                              id=id
                              )
         if init_state:
@@ -53,11 +56,17 @@ class Switch(Button):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_ENTER, event_data))
 
+        self._enter_time = pygame.time.get_ticks()
+        
         self._hover = True
 
     def on_leave(self):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_SWITCH_ON_LEAVE, event_data))
+
+        if self._popup is not None:
+            self._popup.delete()
+            self._popup = None
 
         self._hover = False
 

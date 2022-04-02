@@ -2,7 +2,7 @@ from typing import ClassVar
 import pygame
 import pygame.freetype
 
-from ui.GUI import GUIobject
+from ui.UI_base import PopupObject, UiObject
 from ui.constants import (COLOR_BUTTON_DEFAULT,
                           COLOR_BUTTON_HOVER,
                           COLOR_BUTTON_PRESSED,
@@ -11,9 +11,11 @@ from ui.constants import (COLOR_BUTTON_DEFAULT,
                           UI_BUTTON_ON_ENTER,
                           UI_BUTTON_ON_LEAVE,
                           UI_BUTTON_ON_RELEASE)
+from ui.hint import Hint
+from ui.manager import UiManager
 
 
-class Button(GUIobject):
+class Button(UiObject):
     # Visual
     _f_text: ClassVar[pygame.freetype.Font]
     _sf_icon: pygame.surface.Surface
@@ -24,6 +26,10 @@ class Button(GUIobject):
     # States
     _hover: bool = False
     _pressed: bool = False
+    _enter_time: 0
+    _popup: Hint = None
+    manager: UiManager = None
+
 
     def __init__(self,
                  pos: tuple[float, float],
@@ -33,6 +39,7 @@ class Button(GUIobject):
                  text: str = None,
                  text_color=COLOR_TEXT,
                  text_size=32,
+                 hint_text: str = "",
                  id=None
                  ):
         if text and font:
@@ -44,11 +51,9 @@ class Button(GUIobject):
         elif icon:
             self._type = "icon"
             self._sf_icon = icon
+        self.hint_text = hint_text
         self._rect = pygame.rect.Rect(pos, size)
         super().__init__(id)
-
-    def init():
-        pass
 
     def collidepoint(self, x: float, y: float) -> bool:
         return self._rect.collidepoint(x, y)
@@ -57,11 +62,17 @@ class Button(GUIobject):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_BUTTON_ON_ENTER, event_data))
 
+        self._enter_time = pygame.time.get_ticks()
+
         self._hover = True
 
     def on_leave(self):
         event_data = {'ui_element': self}
         pygame.event.post(pygame.event.Event(UI_BUTTON_ON_LEAVE, event_data))
+
+        if self._popup is not None:
+            self._popup.delete()
+            self._popup = None
 
         self._hover = False
 
@@ -84,6 +95,16 @@ class Button(GUIobject):
     def hover(self): return self._hover
 
     def draw(self, screen: pygame.Surface):
+        # Spawn popup hint
+        if (self._hover 
+                and self._popup is None 
+                and self.hint_text
+                and pygame.time.get_ticks() - self._enter_time > 1000):
+            self._popup = Hint(pygame.mouse.get_pos(),
+                              manager=self.manager,
+                              parent=self,
+                              text=self.hint_text)
+
         # Background
         if self._pressed:
             pygame.draw.rect(screen, COLOR_BUTTON_PRESSED, self._rect)
