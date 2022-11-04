@@ -1,7 +1,7 @@
 # Sudoku
 This is a simple sudoku program written in Python using Pygame. I made this project just for fun.
 
-Here is some screenshots:
+Here are some screenshots:
 
 <img src="https://raw.githubusercontent.com/nuken0va/Sudoku-Pygame/master/Screen-1.png" height="300">
 <img src="https://raw.githubusercontent.com/nuken0va/Sudoku-Pygame/master/Screen-2.png" height="300">
